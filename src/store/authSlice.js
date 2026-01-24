@@ -1,0 +1,27 @@
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  status: false,
+  userData: null,
+  isAdmin: false,
+};
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    login: (state, action) => {
+      state.status = true;
+      state.userData = action.payload.userData;
+      state.isAdmin = action.payload.userData.email === 'admin@example.com'; // Replace with actual admin email check
+    },
+    logout: (state) => {
+      state.status = false;
+      state.userData = null;
+      state.isAdmin = false;
+    },
+  },
+});
+
+export const { login, logout } = authSlice.actions;
+export default authSlice.reducer;

@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+.logo-letter-spacing{
+    letter-spacing: .6em;
+}
