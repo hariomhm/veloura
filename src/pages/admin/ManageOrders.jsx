@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { databases } from '../../lib/appwrite';
+import { useSelector } from 'react-redux';
+import config from '../../config';
 
 const ManageOrders = () => {
+  const isAdmin = useSelector((state) => state.auth.isAdmin);
+
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p>You do not have permission to access this page.</p>
+      </div>
+    );
+  }
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +65,7 @@ const ManageOrders = () => {
               <div>
                 <h3 className="text-lg font-semibold">Order ID: {order.$id}</h3>
                 <p className="text-gray-600 dark:text-gray-300">User ID: {order.userId}</p>
-                <p className="text-gray-600 dark:text-gray-300">Total: ${order.totalAmount || order.total}</p>
+                <p className="text-gray-600 dark:text-gray-300">Total: {config.currencySymbol}{order.totalAmount || order.total}</p>
                 <p className="text-gray-600 dark:text-gray-300">Created: {new Date(order.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
@@ -73,7 +85,7 @@ const ManageOrders = () => {
               <ul className="space-y-1">
                 {order.products.map((product, index) => (
                   <li key={index} className="text-sm">
-                    {product.name} ({product.size}) x{product.quantity} - ${product.price}
+                    {product.name} ({product.size}) x{product.quantity} - {config.currencySymbol}{product.price}
                   </li>
                 ))}
               </ul>

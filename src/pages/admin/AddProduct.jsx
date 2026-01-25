@@ -1,57 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { databases, storage, ID } from '../../lib/appwrite';
+import { useDispatch, useSelector } from 'react-redux';
+import { addProduct } from '../../store/productSlice';
+
 
 const AddProduct = () => {
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.products);
+  const isAdmin = useSelector((state) => state.auth.isAdmin);
+
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p>You do not have permission to access this page.</p>
+      </div>
+    );
+  }
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
-  const [loading, setLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
 
   const handleImageChange = (e) => {
     setImageFiles(Array.from(e.target.files));
   };
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      // Upload images to Appwrite Storage
-      const imageIds = [];
-      for (const file of imageFiles) {
-        const response = await storage.createFile(
-          import.meta.env.VITE_APPWRITE_BUCKET_ID,
-          ID.unique(),
-          file
-        );
-        imageIds.push(response.$id);
-      }
+  const onSubmit = (data) => {
+    dispatch(addProduct({ ...data, images: imageFiles }));
+  };
 
-      // Create product document
-      await databases.createDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-        ID.unique(),
-        {
-          name: data.name,
-          price: parseFloat(data.price),
-          discountPrice: data.discountPrice ? parseFloat(data.discountPrice) : null,
-          category: data.category,
-          sizes: data.sizes.split(',').map(s => s.trim()),
-          images: imageIds,
-          description: data.description,
-          stock: parseInt(data.stock),
-        }
-      );
-
+  useEffect(() => {
+    if (!loading && !error) {
+      // Success
       alert('Product added successfully!');
       reset();
       setImageFiles([]);
-    } catch (error) {
-      console.error('Error adding product:', error);
-      alert('Failed to add product. Please try again.');
-    } finally {
-      setLoading(false);
+    } else if (error) {
+      alert(`Failed to add product: ${error}`);
     }
-  };
+  }, [loading, error, reset]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -97,6 +84,21 @@ const AddProduct = () => {
             className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
           />
           {errors.category && <p className="text-red-500 text-sm">{errors.category.message}</p>}
+        </div>
+
+        <div>
+          <label className="block mb-1">Gender</label>
+          <select
+            {...register('gender', { required: 'Gender is required' })}
+            className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+          >
+            <option value="">Select Gender</option>
+            <option value="Men">Men</option>
+            <option value="Women">Women</option>
+            <option value="Unisex">Unisex</option>
+            <option value="Kids">Kids</option>
+          </select>
+          {errors.gender && <p className="text-red-500 text-sm">{errors.gender.message}</p>}
         </div>
 
         <div>

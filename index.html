@@ -14,6 +14,11 @@
     />
   </head>
   <body>
+    <script>
+      // Prevent FOUC by setting theme class immediately
+      const theme = localStorage.getItem('theme') || 'light';
+      document.documentElement.classList.add(theme);
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

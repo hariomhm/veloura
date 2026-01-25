@@ -13,7 +13,7 @@ const authSlice = createSlice({
     login: (state, action) => {
       state.status = true;
       state.userData = action.payload.userData;
-      state.isAdmin = action.payload.userData.email === 'admin@example.com'; // Replace with actual admin email check
+      state.isAdmin = action.payload.userData.email === 'hariomhm111@gmail.com'; // Replace with actual admin email check
     },
     logout: (state) => {
       state.status = false;

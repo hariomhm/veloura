@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { fetchProductById, clearSelectedProduct } from '../store/productSlice';
 import { addToCart } from '../store/cartSlice';
+import config from '../config';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -22,7 +23,9 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (selectedProduct && selectedProduct.sizes && selectedProduct.sizes.length > 0) {
-      setSelectedSize(selectedProduct.sizes[0]);
+      if (!selectedSize || !selectedProduct.sizes.includes(selectedSize)) {
+        setSelectedSize(selectedProduct.sizes[0]);
+      }
     }
   }, [selectedProduct]);
 
@@ -58,9 +61,9 @@ const ProductDetail = () => {
         <div>
           <h1 className="text-3xl font-bold mb-4">{selectedProduct.name}</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-4">{selectedProduct.description}</p>
-          <p className="text-2xl font-bold text-green-600 mb-4">${selectedProduct.price}</p>
+          <p className="text-2xl font-bold text-green-600 mb-4">{config.currencySymbol}{selectedProduct.price}</p>
           {selectedProduct.discountPrice && selectedProduct.discountPrice < selectedProduct.price && (
-            <p className="text-lg text-red-500 mb-4">Discount: ${selectedProduct.discountPrice}</p>
+            <p className="text-lg text-red-500 mb-4">Discount: {config.currencySymbol}{selectedProduct.discountPrice}</p>
           )}
           <div className="mb-4">
             <h3 className="text-lg font-semibold mb-2">Size:</h3>

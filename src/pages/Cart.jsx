@@ -2,6 +2,7 @@ import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { removeFromCart, updateQuantity, clearCart } from '../store/cartSlice';
 import { Link } from 'react-router-dom';
+import config from '../config';
 
 const Cart = () => {
   const { items, total } = useSelector(state => state.cart);
@@ -40,7 +41,7 @@ const Cart = () => {
               <img src={item.product.imageUrls ? item.product.imageUrls[0] : item.product.image} alt={item.product.name} className="w-20 h-20 object-cover rounded" />
               <div className="flex-1">
                 <h2 className="text-xl font-semibold">{item.product.name} ({item.size})</h2>
-                <p className="text-gray-600 dark:text-gray-300">${item.product.price}</p>
+                <p className="text-gray-600 dark:text-gray-300">{config.currencySymbol}{item.product.price}</p>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -70,7 +71,7 @@ const Cart = () => {
           <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
           <div className="flex justify-between mb-2">
             <span>Subtotal:</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{config.currencySymbol}{total.toFixed(2)}</span>
           </div>
           <div className="flex justify-between mb-4">
             <span>Shipping:</span>
@@ -78,7 +79,7 @@ const Cart = () => {
           </div>
           <div className="flex justify-between text-xl font-bold mb-6">
             <span>Total:</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{config.currencySymbol}{total.toFixed(2)}</span>
           </div>
           <Link
             to="/checkout"

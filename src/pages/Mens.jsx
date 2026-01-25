@@ -7,14 +7,14 @@ import ProductGrid from '../components/ProductGrid';
 import Loading from '../components/Loading';
 import Error from '../components/Error';
 
-const Products = () => {
+const Mens = () => {
   const dispatch = useDispatch();
   const { products, loading, error } = useSelector(state => state.products);
   const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedGender, setSelectedGender] = useState('');
+  const [selectedGender] = useState('Men'); // Fixed to Men
   const [selectedBrand, setSelectedBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -29,14 +29,9 @@ const Products = () => {
     if (category) {
       setSelectedCategory(category);
     }
-    const gender = searchParams.get('gender');
-    if (gender) {
-      setSelectedGender(gender);
-    }
   }, [searchParams]);
 
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
-  const genders = [...new Set(products.map(p => p.gender).filter(Boolean))];
   const brands = [...new Set(products.map(p => p.brand).filter(Boolean))];
 
   const filteredProducts = useMemo(() => {
@@ -45,7 +40,7 @@ const Products = () => {
       const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      const matchesGender = !selectedGender || product.gender === selectedGender;
+      const matchesGender = product.gender === selectedGender;
       const matchesBrand = !selectedBrand || product.brand === selectedBrand;
       const matchesPrice = (!minPrice || product.price >= parseFloat(minPrice)) &&
                            (!maxPrice || product.price <= parseFloat(maxPrice));
@@ -63,24 +58,12 @@ const Products = () => {
     return filtered;
   }, [products, searchTerm, selectedCategory, selectedGender, selectedBrand, minPrice, maxPrice, sortBy]);
 
-  if (loading) return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Our Products</h1>
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="w-full lg:w-1/4">
-          <Loading type="spinner" message="Loading filters..." />
-        </div>
-        <div className="w-full lg:w-3/4">
-          <Loading type="skeleton" />
-        </div>
-      </div>
-    </div>
-  );
-  if (error) return <Error message={`Error: ${error}`} onRetry={() => dispatch(fetchProducts())} />;
+  if (loading) return <Loading message="Loading products..." />;
+  if (error) return <Error message={`Error: ${error}`} />;
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Our Products</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">Men's Collection</h1>
       <div className="flex flex-col lg:flex-row gap-8">
         <ProductFilters
           searchTerm={searchTerm}
@@ -88,7 +71,7 @@ const Products = () => {
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
           selectedGender={selectedGender}
-          setSelectedGender={setSelectedGender}
+          setSelectedGender={() => {}} // No-op since fixed
           selectedBrand={selectedBrand}
           setSelectedBrand={setSelectedBrand}
           minPrice={minPrice}
@@ -98,9 +81,9 @@ const Products = () => {
           sortBy={sortBy}
           setSortBy={setSortBy}
           categories={categories}
-          genders={genders}
+          genders={[]} // Not used
           brands={brands}
-          showGenderFilter={true}
+          showGenderFilter={false}
         />
         <ProductGrid products={filteredProducts} />
       </div>
@@ -108,4 +91,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Mens;

@@ -1,10 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import ThemeBtn from "./ThemeBtn";
 import { Link, useNavigate } from "react-router-dom";
 import { GoSearch } from "react-icons/go";
 import { VscAccount } from "react-icons/vsc";
 import { PiBagSimple } from "react-icons/pi";
-import { IoMdMenu } from "react-icons/io";
+import { IoMdMenu, IoMdClose } from "react-icons/io";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
 import { account } from "../lib/appwrite";
@@ -16,15 +16,12 @@ const Header = () => {
   const isAuthenticated = useSelector((state) => state.auth.status);
   const isAdmin = useSelector((state) => state.auth.isAdmin);
   const cartItemsCount = useSelector((state) => state.cart.items.reduce((total, item) => total + item.quantity, 0));
+  const theme = useSelector((state) => state.theme.mode);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleAccountClick = async () => {
+  const handleAccountClick = () => {
     if (isAuthenticated) {
-      try {
-        await account.deleteSession('current');
-        dispatch(logout());
-      } catch (error) {
-        console.error('Logout failed:', error);
-      }
+      navigate('/profile');
     } else {
       navigate('/login');
     }
@@ -33,15 +30,15 @@ const Header = () => {
   const navMenus = [
     {
       name: "MEN'S",
-      url: "/products",
+      url: "/mens",
     },
     {
       name: "WOMEN'S",
-      url: "/products",
+      url: "/womens",
     },
     {
       name: "KID'S",
-      url: "/products",
+      url: "/kids",
     },
     {
       name: "SHOP ALL",
@@ -89,17 +86,35 @@ const Header = () => {
           )}
         </div>
         {isAdmin && (
-          <div className="flex gap-2">
-            <button onClick={() => navigate('/admin/add-product')} className="text-sm">Add Product</button>
-            <button onClick={() => navigate('/admin/manage-orders')} className="text-sm">Manage Orders</button>
-          </div>
+          <button onClick={() => navigate('/admin')} className="text-sm">Admin Dashboard</button>
         )}
-        <div className="cursor-pointer border p-1 min-[880px]:hidden border-black dark:border-white">
-          <IoMdMenu size={20} />
+        <div className="cursor-pointer border p-1 min-[880px]:hidden border-black dark:border-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <IoMdClose size={20} /> : <IoMdMenu size={20} />}
         </div>
       </div>
+      {mobileMenuOpen && (
+        <div className="absolute top-full left-0 w-full bg-white dark:bg-slate-700 shadow-md min-[880px]:hidden">
+          <ul className="flex flex-col gap-4 p-4">
+            {navMenus.map((menu) => (
+              <li
+                key={menu.name}
+                onClick={() => {
+                  navigate(menu.url);
+                  setMobileMenuOpen(false);
+                }}
+                className="cursor-pointer text-nowrap"
+              >
+                {menu.name}
+              </li>
+            ))}
+            <li className="flex justify-center">
+              <ThemeBtn />
+            </li>
+          </ul>
+        </div>
+      )}
     </nav>
-    
+
   );
 };
 

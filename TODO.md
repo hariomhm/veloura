@@ -1,13 +1,12 @@
-# TODO: Update E-commerce with Real Schemas and Admin Panel
+# UI/UX Optimization Tasks
 
-- [x] Update src/lib/appwrite.js to include Databases and Storage
-- [x] Update productSlice.js for new product schema and image URLs
-- [x] Update cartSlice.js to include size selection
-- [x] Update Checkout.jsx for new orders schema
-- [x] Update ProductDetail.jsx for sizes and multiple images
-- [x] Add admin role check in authSlice.js
-- [x] Create src/pages/admin/AddProduct.jsx with image upload
-- [x] Create src/pages/admin/ManageOrders.jsx
-- [x] Update App.jsx with admin routes
-- [x] Update Header.jsx for admin links
-- [x] Fix bugs in existing components
+## Tasks
+- [x] Prevent FOUC: Add inline script in index.html to set theme class from localStorage
+- [x] Add smooth theme transitions: Update src/index.css with transition classes
+- [x] Create Skeleton component: src/components/Skeleton.jsx for loading states
+- [x] Enhance Loading component: Add skeleton support and better animations
+- [x] Enhance Error component: Add icon, better styling, retry button
+- [x] Improve ProductCard responsiveness: Add skeleton loading
+- [x] Enhance Header mobile navigation: Better mobile menu
+- [x] Make icons theme-aware: Update icon colors based on theme
+- [x] Test theme switching: Run dev server and verify across pages
