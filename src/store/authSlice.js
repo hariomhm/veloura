@@ -4,6 +4,7 @@ const initialState = {
   status: false,
   userData: null,
   isAdmin: false,
+  banned: false,
 };
 
 const authSlice = createSlice({

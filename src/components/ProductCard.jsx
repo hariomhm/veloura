@@ -10,7 +10,7 @@ const ProductCard = React.memo(({ product }) => {
 
   const productName = product.productName || product.name;
   const imageSrc = product.imageUrls ? product.imageUrls[0] : product.image;
-  const discountedPrice = product.discountPrice || Math.round(product.price * 0.9);
+  const discountedPrice = product.priceafterdiscount || product.discountPrice || Math.round(product.price * 0.9);
 
   const handleAddToCart = useCallback((e) => {
     e.preventDefault();
@@ -19,7 +19,7 @@ const ProductCard = React.memo(({ product }) => {
 
   return (
     <Link to={`/product/${product.$id}`} className="block bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <img src={imageSrc} alt={productName} className="w-full h-48 object-cover" />
+      <img src={imageSrc} alt={productName} className="w-full h-48 object-cover" loading="lazy" />
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-2">{productName}</h2>
         <p className="text-lg text-gray-500 line-through mb-1">{config.currencySymbol}{product.price}</p>

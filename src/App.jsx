@@ -25,6 +25,10 @@ import OrderTracking from "./pages/OrderTracking";
 import Returns from "./pages/Returns";
 import AddProduct from "./pages/admin/AddProduct";
 import ManageOrders from "./pages/admin/ManageOrders";
+import ManageBanners from "./pages/admin/ManageBanners";
+import ManageProducts from "./pages/admin/ManageProducts";
+import EditProduct from "./pages/admin/EditProduct";
+import ManageUsers from "./pages/admin/ManageUsers";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
 const App = () => {
@@ -73,7 +77,11 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/add-product" element={<AddProduct />} />
+        <Route path="/admin/manage-products" element={<ManageProducts />} />
+        <Route path="/admin/edit-product/:productId" element={<EditProduct />} />
         <Route path="/admin/manage-orders" element={<ManageOrders />} />
+        <Route path="/admin/manage-banners" element={<ManageBanners />} />
+        <Route path="/admin/manage-users" element={<ManageUsers />} />
       </Routes>
       <Footer />
     </div>

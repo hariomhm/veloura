@@ -18,7 +18,7 @@ const AdminDashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div
           onClick={() => navigate('/admin/add-product')}
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
@@ -27,11 +27,32 @@ const AdminDashboard = () => {
           <p>Add new products to the store inventory.</p>
         </div>
         <div
+          onClick={() => navigate('/admin/manage-products')}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Manage Products</h2>
+          <p>View, edit, and delete products.</p>
+        </div>
+        <div
           onClick={() => navigate('/admin/manage-orders')}
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
         >
           <h2 className="text-xl font-semibold mb-2">Manage Orders</h2>
           <p>View and update order statuses.</p>
+        </div>
+        <div
+          onClick={() => navigate('/admin/manage-banners')}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Manage Banners</h2>
+          <p>Update homepage banners.</p>
+        </div>
+        <div
+          onClick={() => navigate('/admin/manage-users')}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
+        >
+          <h2 className="text-xl font-semibold mb-2">Manage Users</h2>
+          <p>View and manage user accounts.</p>
         </div>
       </div>
     </div>

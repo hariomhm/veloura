@@ -46,7 +46,7 @@ const Header = () => {
     },
   ];
   return (
-    <nav className="w-full text-black sticky top-0 dark:text-white dark:bg-slate-700 shadow-md px-5 py-4 grid grid-cols-3 max-[880px]:grid-cols-2 duration-500">
+    <nav className="w-full text-black sticky top-0 dark:text-white dark:bg-slate-700 shadow-md px-5 py-6 grid grid-cols-3 max-[880px]:grid-cols-2 duration-500">
       <div className="w-full max-[880px]:hidden ">
         <ul className="w-full flex gap-5">
           {navMenus.map((menu) => {

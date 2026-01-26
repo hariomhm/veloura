@@ -41,6 +41,9 @@ export const addProduct = createAsyncThunk(
     try {
       const { name, price, discountPrice, category, sizes, images, description, stock, gender } = productData;
 
+      // Calculate priceafterdiscount
+      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : Math.round(parseFloat(price) * 0.9);
+
       // Upload images to Appwrite Storage
       const imageIds = [];
       for (const file of images) {
@@ -61,6 +64,7 @@ export const addProduct = createAsyncThunk(
           productName: name,
           price: parseFloat(price),
           discountPrice: discountPrice ? parseFloat(discountPrice) : null,
+          priceafterdiscount,
           category,
           gender,
           sizes: sizes.split(',').map(s => s.trim()),
@@ -71,6 +75,77 @@ export const addProduct = createAsyncThunk(
       );
 
       return product;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Async thunk for updating a product
+export const updateProduct = createAsyncThunk(
+  'products/updateProduct',
+  async ({ productId, productData }, { rejectWithValue }) => {
+    try {
+      const { name, price, discountPrice, category, sizes, images, description, stock, gender } = productData;
+
+      // Calculate priceafterdiscount
+      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : Math.round(parseFloat(price) * 0.9);
+
+      const updateData = {
+        productName: name,
+        price: parseFloat(price),
+        discountPrice: discountPrice ? parseFloat(discountPrice) : null,
+        priceafterdiscount,
+        category,
+        gender,
+        sizes: sizes.split(',').map(s => s.trim()),
+        description,
+        stock: parseInt(stock),
+      };
+
+      // Handle images if provided
+      if (images && images.length > 0) {
+        const imageIds = [];
+        for (const file of images) {
+          if (file instanceof File) {
+            const response = await storage.createFile(
+              import.meta.env.VITE_APPWRITE_BUCKET_ID,
+              ID.unique(),
+              file
+            );
+            imageIds.push(response.$id);
+          } else {
+            imageIds.push(file); // Assume it's already an ID
+          }
+        }
+        updateData.images = imageIds;
+      }
+
+      const updatedProduct = await databases.updateDocument(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
+        productId,
+        updateData
+      );
+
+      return updatedProduct;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Async thunk for deleting a product
+export const deleteProduct = createAsyncThunk(
+  'products/deleteProduct',
+  async (productId, { rejectWithValue }) => {
+    try {
+      await databases.deleteDocument(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
+        productId
+      );
+      return productId;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -147,6 +222,30 @@ const productSlice = createSlice({
         // Optionally, could refetch products or add to state, but for now just clear error
       })
       .addCase(addProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateProduct.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateProduct.fulfilled, (state) => {
+        state.loading = false;
+        // Optionally refetch or update state
+      })
+      .addCase(updateProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteProduct.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteProduct.fulfilled, (state, action) => {
+        state.loading = false;
+        state.products = state.products.filter(product => product.$id !== action.payload);
+      })
+      .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

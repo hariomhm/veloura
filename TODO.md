@@ -1,12 +1,17 @@
-# UI/UX Optimization Tasks
+# Admin Panel Features
 
 ## Tasks
-- [x] Prevent FOUC: Add inline script in index.html to set theme class from localStorage
-- [x] Add smooth theme transitions: Update src/index.css with transition classes
-- [x] Create Skeleton component: src/components/Skeleton.jsx for loading states
-- [x] Enhance Loading component: Add skeleton support and better animations
-- [x] Enhance Error component: Add icon, better styling, retry button
-- [x] Improve ProductCard responsiveness: Add skeleton loading
-- [x] Enhance Header mobile navigation: Better mobile menu
-- [x] Make icons theme-aware: Update icon colors based on theme
-- [x] Test theme switching: Run dev server and verify across pages
+- [x] Create bannerSlice.js with fetchBanners, updateBanner thunks
+- [x] Add banners collection to config.js
+- [x] Create ManageBanners.jsx admin page
+- [x] Update AdminDashboard.jsx to include Manage Banners option
+- [x] Add routes in App.jsx for new admin pages (manage-banners, manage-products, edit-product, manage-users)
+- [x] Extend productSlice with updateProduct, deleteProduct thunks
+- [x] Create ManageProducts.jsx and EditProduct.jsx admin pages
+- [x] Create userSlice.js with fetchUsers, banUser, unbanUser thunks
+- [x] Add users collection to config.js
+- [x] Create ManageUsers.jsx admin page
+- [x] Update authSlice to handle banned users
+- [x] Update Home.jsx to fetch and display banners dynamically
+- [x] Enhance ManageOrders.jsx with search/filter if needed
+- [x] Test all new features by running the app and verifying functionality

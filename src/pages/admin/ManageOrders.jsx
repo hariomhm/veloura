@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { databases } from '../../lib/appwrite';
 import { useSelector } from 'react-redux';
 import config from '../../config';
@@ -14,8 +14,11 @@ const ManageOrders = () => {
       </div>
     );
   }
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     fetchOrders();
@@ -53,13 +56,45 @@ const ManageOrders = () => {
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch = searchTerm === '' ||
+        order.$id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.userId && order.userId.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesStatus = statusFilter === '' || order.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, searchTerm, statusFilter]);
+
   if (loading) return <div className="text-center py-10">Loading orders...</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Manage Orders</h1>
+
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col md:flex-row gap-4">
+        <input
+          type="text"
+          placeholder="Search by Order ID or User ID"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+        >
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+        </select>
+      </div>
+
       <div className="space-y-4">
-        {orders.map(order => (
+        {filteredOrders.map(order => (
           <div key={order.$id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
             <div className="flex justify-between items-start mb-4">
               <div>

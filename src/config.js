@@ -4,6 +4,8 @@ const config = {
     appwriteDatabaseId: String(import.meta.env.VITE_APPWRITE_DATABASE_ID || 'your_database_id'),
     appwriteProductsCollectionId: String(import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID || 'products_collection_id'),
     appwriteOrdersCollectionId: String(import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID || 'orders_collection_id'),
+    appwriteBannersCollectionId: String(import.meta.env.VITE_APPWRITE_BANNERS_COLLECTION_ID || 'banners_collection_id'),
+    appwriteUsersCollectionId: String(import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || 'users_collection_id'),
     appwriteBucketId: String(import.meta.env.VITE_APPWRITE_BUCKET_ID || 'bucket_id'),
     currencySymbol: '₹'
 }
