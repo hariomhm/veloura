@@ -13,7 +13,7 @@ const Womens = () => {
   const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [selectedGender] = useState('Women'); // Fixed to Women
   const [selectedBrand, setSelectedBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -23,13 +23,6 @@ const Womens = () => {
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
-
-  useEffect(() => {
-    const category = searchParams.get('category');
-    if (category) {
-      setSelectedCategory(category);
-    }
-  }, [searchParams]);
 
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
   const brands = [...new Set(products.map(p => p.brand).filter(Boolean))];

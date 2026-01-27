@@ -2,9 +2,20 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { databases } from '../../lib/appwrite';
 import { useSelector } from 'react-redux';
 import config from '../../config';
+import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 
 const ManageOrders = () => {
   const isAdmin = useSelector((state) => state.auth.isAdmin);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchOrders();
+    }
+  }, [isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -14,15 +25,6 @@ const ManageOrders = () => {
       </div>
     );
   }
-
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -66,6 +68,66 @@ const ManageOrders = () => {
     });
   }, [orders, searchTerm, statusFilter]);
 
+  const columns = useMemo(() => [
+    {
+      accessorKey: '$id',
+      header: 'Order ID',
+      cell: ({ getValue }) => <span className="font-mono text-sm">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'userId',
+      header: 'User ID',
+      cell: ({ getValue }) => <span className="font-mono text-sm">{getValue()}</span>,
+    },
+    {
+      accessorFn: (row) => row.totalAmount || row.total || 0,
+      header: 'Total',
+      cell: ({ getValue }) => `${config.currencySymbol}${getValue()}`,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ getValue, row }) => (
+        <select
+          value={getValue()}
+          onChange={(e) => updateOrderStatus(row.original.$id, e.target.value)}
+          className="px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600"
+        >
+          <option value="pending">Pending</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+        </select>
+      ),
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created',
+      cell: ({ getValue }) => new Date(getValue()).toLocaleDateString(),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <button
+          onClick={() => {
+            const order = row.original;
+            alert(`Order Details:\n${order.products.map(p => `${p.name} (${p.size}) x${p.quantity} - ${config.currencySymbol}${p.price}`).join('\n')}`);
+          }}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+        >
+          View Products
+        </button>
+      ),
+    },
+  ], [updateOrderStatus]);
+
+  const table = useReactTable({
+    data: filteredOrders,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   if (loading) return <div className="text-center py-10">Loading orders...</div>;
 
   return (
@@ -93,40 +155,44 @@ const ManageOrders = () => {
         </select>
       </div>
 
-      <div className="space-y-4">
-        {filteredOrders.map(order => (
-          <div key={order.$id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold">Order ID: {order.$id}</h3>
-                <p className="text-gray-600 dark:text-gray-300">User ID: {order.userId}</p>
-                <p className="text-gray-600 dark:text-gray-300">Total: {config.currencySymbol}{order.totalAmount || order.total}</p>
-                <p className="text-gray-600 dark:text-gray-300">Created: {new Date(order.createdAt).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <select
-                  value={order.status}
-                  onChange={(e) => updateOrderStatus(order.$id, e.target.value)}
-                  className="px-3 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Products:</h4>
-              <ul className="space-y-1">
-                {order.products.map((product, index) => (
-                  <li key={index} className="text-sm">
-                    {product.name} ({product.size}) x{product.quantity} - {config.currencySymbol}{product.price}
-                  </li>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th
+                    key={header.id}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {{
+                      asc: ' 🔼',
+                      desc: ' 🔽',
+                    }[header.column.getIsSorted()] ?? null}
+                  </th>
                 ))}
-              </ul>
-            </div>
+              </tr>
+            ))}
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+            {table.getRowModel().rows.map(row => (
+              <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                {row.getVisibleCells().map(cell => (
+                  <td key={cell.id} className="px-4 py-4 whitespace-nowrap">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredOrders.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            No orders found.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

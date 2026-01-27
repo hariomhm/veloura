@@ -1,17 +1,9 @@
-# Admin Panel Features
+# Admin Panel React Table Implementation
 
 ## Tasks
-- [x] Create bannerSlice.js with fetchBanners, updateBanner thunks
-- [x] Add banners collection to config.js
-- [x] Create ManageBanners.jsx admin page
-- [x] Update AdminDashboard.jsx to include Manage Banners option
-- [x] Add routes in App.jsx for new admin pages (manage-banners, manage-products, edit-product, manage-users)
-- [x] Extend productSlice with updateProduct, deleteProduct thunks
-- [x] Create ManageProducts.jsx and EditProduct.jsx admin pages
-- [x] Create userSlice.js with fetchUsers, banUser, unbanUser thunks
-- [x] Add users collection to config.js
-- [x] Create ManageUsers.jsx admin page
-- [x] Update authSlice to handle banned users
-- [x] Update Home.jsx to fetch and display banners dynamically
-- [x] Enhance ManageOrders.jsx with search/filter if needed
-- [x] Test all new features by running the app and verifying functionality
+- [x] Update ManageProducts.jsx to use React Table with columns: Image, Name, Price, Stock, Actions
+- [x] Update ManageUsers.jsx to use React Table with columns: Name, Email, Status, Actions
+- [x] Update ManageOrders.jsx to use React Table with columns: Order ID, User ID, Total, Status, Created, Actions
+- [x] Fix potential bugs in ManageOrders.jsx (totalAmount vs total, product structure)
+- [x] Improve error handling and UX across admin pages
+- [ ] Test all updated admin pages

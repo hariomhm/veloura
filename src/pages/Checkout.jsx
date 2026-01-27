@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/cartSlice';
@@ -28,8 +28,109 @@ const Checkout = () => {
     cvv: '',
   });
 
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const createRazorpayOrder = async () => {
+    try {
+      const response = await fetch('/api/create-razorpay-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: total * 100, // Razorpay expects amount in paisa
+          currency: 'INR',
+          receipt: `receipt_${Date.now()}`,
+        }),
+      });
+      const order = await response.json();
+      return order;
+    } catch (error) {
+      console.error('Error creating Razorpay order:', error);
+      throw error;
+    }
+  };
+
+  const handleRazorpayPayment = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const order = await createRazorpayOrder();
+
+      const options = {
+        key: config.razorpayKeyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Veloura Ecommerce',
+        description: 'Purchase from Veloura',
+        order_id: order.id,
+        handler: async function (response) {
+          // Payment successful
+          try {
+            // Create order in Appwrite
+            await databases.createDocument(
+              import.meta.env.VITE_APPWRITE_DATABASE_ID,
+              import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
+              ID.unique(),
+              {
+                userId: user.$id,
+                products: items.map(item => ({
+                  productId: item.product.$id,
+                  name: item.product.name,
+                  price: item.product.price,
+                  quantity: item.quantity,
+                  size: item.size,
+                })),
+                total,
+                shippingAddress: formData,
+                status: 'paid',
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                createdAt: new Date().toISOString(),
+              }
+            );
+
+            dispatch(clearCart());
+            navigate('/order-success');
+          } catch (error) {
+            console.error('Order creation failed:', error);
+            alert('Payment successful but order creation failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+        },
+        theme: {
+          color: '#3399cc',
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      alert('Failed to initiate payment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -304,6 +405,17 @@ const Checkout = () => {
                       className="w-full bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
                     >
                       {loading ? 'Processing...' : 'Pay with Google Pay'}
+                    </button>
+                  </div>
+                )}
+                {paymentMethod === 'razorpay' && (
+                  <div>
+                    <button
+                      onClick={handleRazorpayPayment}
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Processing...' : `Pay with Razorpay - ${config.currencySymbol}${total.toFixed(2)}`}
                     </button>
                   </div>
                 )}

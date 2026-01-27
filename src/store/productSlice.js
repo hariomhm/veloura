@@ -42,7 +42,7 @@ export const addProduct = createAsyncThunk(
       const { name, price, discountPrice, category, sizes, images, description, stock, gender } = productData;
 
       // Calculate priceafterdiscount
-      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : Math.round(parseFloat(price) * 0.9);
+      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : parseFloat(price) * 0.9;
 
       // Upload images to Appwrite Storage
       const imageIds = [];

@@ -38,22 +38,18 @@ export class Service{
     }
 
     async updatePost(slug, {title, content, imageFile, status}){
-        try {
-            return await databases.updateDocument(
-                config.appwriteDatabaseId,
-                config.appwriteProductsCollectionId,
-                slug,
-                {
-                    title,
-                    content,
-                    imageFile,
-                    status,
+        return await databases.updateDocument(
+            config.appwriteDatabaseId,
+            config.appwriteProductsCollectionId,
+            slug,
+            {
+                title,
+                content,
+                imageFile,
+                status,
 
-                }
-            )
-        } catch (error) {
-            throw error;
-        }
+            }
+        )
     }
 
     async deletePost(slug){
@@ -100,15 +96,11 @@ export class Service{
     // file upload service
 
     async uploadFile(file){
-        try {
-            return await storage.createFile(
-                config.appwriteBucketId,
-                ID.unique(),
-                file
-            )
-        } catch (error) {
-            throw error;
-        }
+        return await storage.createFile(
+            config.appwriteBucketId,
+            ID.unique(),
+            file
+        )
     }
 
     async deleteFile(fileId){

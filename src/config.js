@@ -7,7 +7,9 @@ const config = {
     appwriteBannersCollectionId: String(import.meta.env.VITE_APPWRITE_BANNERS_COLLECTION_ID || 'banners_collection_id'),
     appwriteUsersCollectionId: String(import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || 'users_collection_id'),
     appwriteBucketId: String(import.meta.env.VITE_APPWRITE_BUCKET_ID || 'bucket_id'),
-    currencySymbol: '₹'
+    currencySymbol: '₹',
+    razorpayKeyId: String(import.meta.env.VITE_RAZORPAY_KEY_ID || 'your_razorpay_key_id'),
+    razorpayFunctionId: String(import.meta.env.VITE_RAZORPAY_FUNCTION_ID || 'your_razorpay_function_id'),
 }
 
 export default config;
