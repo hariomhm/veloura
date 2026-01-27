@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   status: false,
@@ -8,18 +8,25 @@ const initialState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     login: (state, action) => {
+      const user = action.payload.userData;
+
       state.status = true;
-      state.userData = action.payload.userData;
-      state.isAdmin = action.payload.userData.email === 'hariomhm111@gmail.com'; // Replace with actual admin email check
+      state.userData = user;
+
+      // ✅ ROLE & FLAGS SHOULD COME FROM BACKEND
+      state.isAdmin = user?.prefs?.role === "admin";
+      state.banned = user?.prefs?.banned === true;
     },
+
     logout: (state) => {
       state.status = false;
       state.userData = null;
       state.isAdmin = false;
+      state.banned = false;
     },
   },
 });

@@ -1,43 +1,71 @@
-import React, { useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { addToCart } from '../store/cartSlice';
-import config from '../config';
-import { FaShoppingCart } from 'react-icons/fa';
+import { memo } from "react";
+import { Link } from "react-router-dom";
+import config from "../config";
 
-const ProductCard = React.memo(({ product }) => {
-  const dispatch = useDispatch();
+/* ---------- HELPERS ---------- */
+const getSellingPrice = (product) => product.sellingPrice ?? product.price;
 
-  const productName = product.productName || product.name;
-  const imageSrc = product.imageUrls ? product.imageUrls[0] : product.image;
-  const discountedPrice = product.priceafterdiscount || product.discountPrice || Math.round(product.price * 0.9);
-  const discountPercentage = Math.round(((product.price - discountedPrice) / product.price) * 100);
+const ProductCard = memo(({ product }) => {
+  const productName = product.productName || "Product";
 
-  const handleAddToCart = useCallback((e) => {
-    e.preventDefault();
-    dispatch(addToCart({ product }));
-  }, [dispatch, product]);
+  const imageSrc =
+    product.image ||
+    product.imageUrls?.[0] ||
+    "/placeholder-product.png";
+
+  const mrp = product.mrp;
+  const sellingPrice = getSellingPrice(product);
+  const discountPercent =
+    mrp && mrp > sellingPrice
+      ? Math.round(((mrp - sellingPrice) / mrp) * 100)
+      : product.discountPercent || 0;
 
   return (
-    <Link to={`/product/${product.$id}`} className="block bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <img src={imageSrc} alt={productName} className="w-full h-48 object-cover" loading="lazy" />
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-2">{productName}</h2>
-        <p className="text-lg text-gray-500 line-through mb-1">{config.currencySymbol }{product.price}</p>
-        <p className="text-2xl font-bold text-green-600 mb-1">{config.currencySymbol}{discountedPrice}</p>
-        <p className="text-sm text-red-500 font-medium mb-4">{discountPercentage}% OFF</p>
-        <button
-          onClick={handleAddToCart}
-          className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors flex items-center justify-center"
-        >
-          <FaShoppingCart className="mr-2" />
-          Add to Cart
-        </button>
+    <Link
+      to={`/product/${product.$id}`}
+      className="block bg-white dark:bg-gray-800"
+    >
+      {/* IMAGE */}
+      <div className="relative overflow-hidden">
+        <img
+          src={imageSrc}
+          alt={productName}
+          className="w-full aspect-[3/4] object-cover"
+          loading="lazy"
+        />
+      </div>
+
+      {/* DETAILS */}
+      <div className="px-2 py-3">
+        {/* PRODUCT NAME */}
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 line-clamp-2">
+          {productName}
+        </h3>
+
+        {/* PRICE ROW */}
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-base font-semibold text-gray-900 dark:text-white">
+            {config.currencySymbol}
+            {sellingPrice}
+          </span>
+
+          {mrp && mrp > sellingPrice && (
+            <>
+              <span className="text-sm text-gray-500 line-through">
+                {config.currencySymbol}
+                {mrp}
+              </span>
+
+              <span className="text-sm font-medium text-red-600">
+                {discountPercent}% OFF
+              </span>
+            </>
+          )}
+        </div>
       </div>
     </Link>
   );
 });
 
-ProductCard.displayName = 'ProductCard';
-
+ProductCard.displayName = "ProductCard";
 export default ProductCard;

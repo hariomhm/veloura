@@ -1,96 +1,126 @@
-import React, { useEffect, useMemo } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchUsers, banUser, unbanUser } from '../../store/userSlice';
-import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchUsers, banUser, unbanUser } from "../../store/userSlice";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+} from "@tanstack/react-table";
 
 const ManageUsers = () => {
-  const isAdmin = useSelector((state) => state.auth.isAdmin);
-  const { users, loading, error } = useSelector((state) => state.users);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (isAdmin) {
-      dispatch(fetchUsers());
-    }
-  }, [dispatch, isAdmin]);
+  const isAdmin = useSelector((state) => state.auth.isAdmin);
+  const { users, loading, error } = useSelector((state) => state.users);
 
+  const [actionUserId, setActionUserId] = useState(null);
+
+  /* ---------- ADMIN GUARD ---------- */
   if (!isAdmin) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4 text-red-500">
+          Access Denied
+        </h1>
         <p>You do not have permission to access this page.</p>
       </div>
     );
   }
 
-  const handleBan = (userId) => {
-    dispatch(banUser(userId))
-      .unwrap()
-      .then(() => {
-        dispatch(fetchUsers()); // Refetch to update list
-      })
-      .catch((error) => {
-        alert('Failed to ban user: ' + error);
-      });
+  /* ---------- FETCH USERS ---------- */
+  useEffect(() => {
+    dispatch(fetchUsers());
+  }, [dispatch]);
+
+  /* ---------- ACTION HANDLERS ---------- */
+  const handleBan = async (userId) => {
+    try {
+      setActionUserId(userId);
+      await dispatch(banUser(userId)).unwrap();
+    } catch (err) {
+      alert(`Failed to ban user: ${err}`);
+    } finally {
+      setActionUserId(null);
+    }
   };
 
-  const handleUnban = (userId) => {
-    dispatch(unbanUser(userId))
-      .unwrap()
-      .then(() => {
-        dispatch(fetchUsers()); // Refetch to update list
-      })
-      .catch((error) => {
-        alert('Failed to unban user: ' + error);
-      });
+  const handleUnban = async (userId) => {
+    try {
+      setActionUserId(userId);
+      await dispatch(unbanUser(userId)).unwrap();
+    } catch (err) {
+      alert(`Failed to unban user: ${err}`);
+    } finally {
+      setActionUserId(null);
+    }
   };
 
-  if (loading) return <div className="text-center py-10">Loading users...</div>;
-  if (error) return <div className="text-center py-10 text-red-500">Error: {error}</div>;
+  /* ---------- TABLE COLUMNS ---------- */
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ getValue }) => (
+          <span className="font-medium">
+            {getValue() || "No name"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ getValue }) => (
+          <span className="font-mono text-sm">{getValue()}</span>
+        ),
+      },
+      {
+        accessorKey: "banned",
+        header: "Status",
+        cell: ({ getValue }) => (
+          <span
+            className={`text-sm font-semibold ${
+              getValue() ? "text-red-500" : "text-green-500"
+            }`}
+          >
+            {getValue() ? "Banned" : "Active"}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const isBanned = row.original.banned;
+          const isLoading = actionUserId === row.original.$id;
 
-  const columns = useMemo(() => [
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ getValue }) => <span className="font-medium">{getValue() || 'No name'}</span>,
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-    },
-    {
-      accessorKey: 'banned',
-      header: 'Status',
-      cell: ({ getValue }) => (
-        <span className={`text-sm ${getValue() ? 'text-red-500' : 'text-green-500'}`}>
-          {getValue() ? 'Banned' : 'Active'}
-        </span>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex space-x-2">
-          {row.original.banned ? (
+          return (
             <button
-              onClick={() => handleUnban(row.original.$id)}
-              className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+              onClick={() =>
+                isBanned
+                  ? handleUnban(row.original.$id)
+                  : handleBan(row.original.$id)
+              }
+              disabled={isLoading}
+              className={`px-3 py-1 rounded text-sm text-white disabled:opacity-50 ${
+                isBanned
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
             >
-              Unban
+              {isLoading
+                ? "Processing…"
+                : isBanned
+                ? "Unban"
+                : "Ban"}
             </button>
-          ) : (
-            <button
-              onClick={() => handleBan(row.original.$id)}
-              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-            >
-              Ban
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ], [handleBan, handleUnban]);
+          );
+        },
+      },
+    ],
+    [actionUserId]
+  );
 
   const table = useReactTable({
     data: users,
@@ -99,42 +129,73 @@ const ManageUsers = () => {
     getSortedRowModel: getSortedRowModel(),
   });
 
+  /* ---------- STATES ---------- */
+  if (loading) {
+    return <div className="text-center py-12">Loading users…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        Error: {error}
+      </div>
+    );
+  }
+
+  /* ---------- UI ---------- */
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold mb-8">Manage Users</h1>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700">
-            {table.getHeaderGroups().map(headerGroup => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
+                {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                    onClick={header.column.getToggleSortingHandler()}
+                    onClick={
+                      header.column.getToggleSortingHandler?.()
+                    }
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
                     {{
-                      asc: ' 🔼',
-                      desc: ' 🔽',
+                      asc: " 🔼",
+                      desc: " 🔽",
                     }[header.column.getIsSorted()] ?? null}
                   </th>
                 ))}
               </tr>
             ))}
           </thead>
+
           <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-            {table.getRowModel().rows.map(row => (
-              <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} className="px-4 py-4 whitespace-nowrap">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {table.getRowModel().rows.map((row) => (
+              <tr
+                key={row.id}
+                className="hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className="px-4 py-4 whitespace-nowrap"
+                  >
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
+
         {users.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             No users found.

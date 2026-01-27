@@ -1,87 +1,128 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts } from '../store/productSlice';
-import { useSearchParams } from 'react-router-dom';
-import ProductFilters from '../components/ProductFilters';
-import ProductGrid from '../components/ProductGrid';
-import Loading from '../components/Loading';
-import Error from '../components/Error';
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts } from "../store/productSlice";
+import ProductGrid from "../components/ProductGrid";
+import ProductFilters from "../components/ProductFilters";
+import TopFilterBar from "../components/TopFilterBar";
+import FilterDrawer from "../components/FilterDrawer";
+import Loading from "../components/Loading";
+import Error from "../components/Error";
 
 const Products = () => {
   const dispatch = useDispatch();
-  const { products, loading, error } = useSelector(state => state.products);
-  const [searchParams] = useSearchParams();
+  const { products, loading, error } = useSelector(
+    (state) => state.products
+  );
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedGender, setSelectedGender] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState("relevance");
+
+  const [priceRange, setPriceRange] = useState({
+    min: 0,
+    max: 5000,
+    value: 5000,
+  });
 
   useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
+    if (!products.length) dispatch(fetchProducts());
+  }, [dispatch, products.length]);
 
-  useEffect(() => {
-    const category = searchParams.get('category');
-    if (category) {
-      setSelectedCategory(category);
-    }
-    const gender = searchParams.get('gender');
-    if (gender) {
-      setSelectedGender(gender);
-    }
-  }, [searchParams]);
+  const categories = useMemo(
+    () => [...new Set(products.map(p => p.category).filter(Boolean))],
+    [products]
+  );
 
-  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
-  const genders = [...new Set(products.map(p => p.gender).filter(Boolean))];
-  const brands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+  const genders = useMemo(
+    () => [...new Set(products.map(p => p.gender).filter(Boolean))],
+    [products]
+  );
+
+  const brands = useMemo(
+    () => [...new Set(products.map(p => p.brand).filter(Boolean))],
+    [products]
+  );
 
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(product => {
-      const productName = product.productName || product.name;
-      const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      const matchesGender = !selectedGender || product.gender === selectedGender;
-      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
-      const matchesPrice = (!minPrice || product.price >= parseFloat(minPrice)) &&
-                           (!maxPrice || product.price <= parseFloat(maxPrice));
-      return matchesSearch && matchesCategory && matchesGender && matchesBrand && matchesPrice;
+    let list = products.filter((p) => {
+      const name = (p.productName || "").toLowerCase();
+      const desc = (p.description || "").toLowerCase();
+      const price = p.sellingPrice ?? p.price ?? 0;
+      const term = searchTerm.toLowerCase();
+
+      return (
+        (!term || name.includes(term) || desc.includes(term)) &&
+        (!selectedCategory || p.category === selectedCategory) &&
+        (!selectedGender || p.gender === selectedGender) &&
+        (!selectedBrand || p.brand === selectedBrand) &&
+        (!minPrice || price >= Number(minPrice)) &&
+        (!maxPrice || price <= Number(maxPrice)) &&
+        price <= priceRange.value
+      );
     });
 
-    if (sortBy === 'price-low') {
-      filtered.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'price-high') {
-      filtered.sort((a, b) => b.price - a.price);
-    } else {
-      filtered.sort((a, b) => (a.productName || a.name).localeCompare(b.productName || b.name));
+    if (sortBy === "price-low") {
+      list.sort((a, b) => a.sellingPrice - b.sellingPrice);
+    } else if (sortBy === "price-high") {
+      list.sort((a, b) => b.sellingPrice - a.sellingPrice);
     }
 
-    return filtered;
-  }, [products, searchTerm, selectedCategory, selectedGender, selectedBrand, minPrice, maxPrice, sortBy]);
+    return list;
+  }, [
+    products,
+    searchTerm,
+    selectedCategory,
+    selectedGender,
+    selectedBrand,
+    minPrice,
+    maxPrice,
+    sortBy,
+    priceRange.value,
+  ]);
 
-  if (loading) return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Our Products</h1>
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="w-full lg:w-1/4">
-          <Loading type="spinner" message="Loading filters..." />
-        </div>
-        <div className="w-full lg:w-3/4">
-          <Loading type="skeleton" />
-        </div>
-      </div>
-    </div>
-  );
-  if (error) return <Error message={`Error: ${error}`} onRetry={() => dispatch(fetchProducts())} />;
+  if (loading) return <Loading type="skeleton" />;
+  if (error) return <Error message={error} />;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Our Products</h1>
-      <div className="flex flex-col lg:flex-row gap-8">
+    <div className="max-w-[1400px] mx-auto px-4 py-6">
+      {/* BREADCRUMB */}
+      <div className="text-sm text-gray-500 mb-4">
+        Home / Collections /{" "}
+        <span className="text-gray-900 font-medium">
+          Vastrado shop all
+        </span>
+      </div>
+
+      {/* TOP FILTER BAR */}
+      <TopFilterBar
+        total={filteredProducts.length}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        onOpenFilters={() => setShowFilters(true)}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+      />
+
+      {/* PRODUCTS */}
+      {filteredProducts.length ? (
+        <ProductGrid products={filteredProducts} />
+      ) : (
+        <div className="text-center py-20 text-gray-500">
+          No products found
+        </div>
+      )}
+
+      {/* FILTER DRAWER */}
+      <FilterDrawer
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+      >
         <ProductFilters
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -100,10 +141,9 @@ const Products = () => {
           categories={categories}
           genders={genders}
           brands={brands}
-          showGenderFilter={true}
+          showGenderFilter
         />
-        <ProductGrid products={filteredProducts} />
-      </div>
+      </FilterDrawer>
     </div>
   );
 };

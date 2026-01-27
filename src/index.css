@@ -1,11 +1,29 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Smooth theme transitions */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+/* ---------- THEME TRANSITIONS ---------- */
+/* Apply only to common UI elements, not everything */
+
+html,
+body,
+button,
+a,
+input,
+textarea,
+select,
+header,
+footer,
+section,
+article,
+div {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
-.logo-letter-spacing{
-    letter-spacing: .6em;
+/* ---------- BRAND UTILS ---------- */
+
+.logo-letter-spacing {
+  letter-spacing: 0.6em;
 }

@@ -2,24 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- <link rel="icon" type="image/svg+xml" href="/vite.svg" /> -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Veloura</title>
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Mobile & Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta -->
+    <title>Veloura | Premium Fashion Store</title>
+    <meta
+      name="description"
+      content="Veloura – premium fashion for men, women & kids. Shop the latest trends with secure payments and fast delivery."
+    />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
       rel="stylesheet"
     />
-  </head>
-  <body>
+
+    <!-- Prevent FOUC (theme flash) -->
     <script>
-      // Prevent FOUC by setting theme class immediately
-      const theme = localStorage.getItem('theme') || 'light';
+      const theme = localStorage.getItem("theme") || "light";
       document.documentElement.classList.add(theme);
     </script>
+
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+
+  <body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div id="root"></div>
+
+    <!-- React Entry -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

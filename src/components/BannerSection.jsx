@@ -2,49 +2,54 @@
 import { Link } from "react-router-dom";
 
 const BannerSection = ({
-  bgImage,
-  title,
-  description,
-  buttonText,
-  linkTo,
+  bgImage = "",
+  title = "",
+  description = "",
+  buttonText = "Shop Now",
+  linkTo = "/",
   showImage = false,
   imageSrc = "",
+  imageAlt = "Banner image",
 }) => {
   return (
     <section
-      className="relative h-screen flex items-center justify-center"
-      style={{
-        backgroundImage: bgImage ? `url('${bgImage}')` : "none",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      className="relative min-h-screen flex items-center justify-center bg-center bg-cover"
+      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
     >
-      {/* overlay */}
-      <div className="absolute inset-0 bg-black/50"></div>
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/50" aria-hidden="true"></div>
 
-      <div className="relative z-10 text-center text-white px-4">
-        {showImage && (
+      {/* Content */}
+      <div className="relative z-10 text-center text-white px-4 max-w-3xl">
+        {showImage && imageSrc && (
           <img
             src={imageSrc}
-            alt="banner"
-            className="mx-auto mb-6 max-w-full"
+            alt={imageAlt}
+            className="mx-auto mb-6 max-h-40 object-contain"
+            loading="lazy"
           />
         )}
 
-        <h1 className="text-5xl font-bold mb-4 tracking-wide">
-          {title}
-        </h1>
+        {title && (
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-wide">
+            {title}
+          </h1>
+        )}
 
-        <p className="text-xl mb-8 max-w-2xl mx-auto">
-          {description}
-        </p>
+        {description && (
+          <p className="text-base sm:text-lg md:text-xl mb-8">
+            {description}
+          </p>
+        )}
 
-        <Link
-          to={linkTo}
-          className="inline-block bg-white text-black py-3 px-10 rounded-full font-semibold text-lg hover:bg-gray-200 transition"
-        >
-          {buttonText}
-        </Link>
+        {buttonText && (
+          <Link
+            to={linkTo}
+            className="inline-block bg-white text-black py-3 px-10 rounded-full font-semibold text-base sm:text-lg hover:bg-gray-200 transition-colors duration-200"
+          >
+            {buttonText}
+          </Link>
+        )}
       </div>
     </section>
   );

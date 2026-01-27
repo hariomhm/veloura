@@ -1,143 +1,187 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { databases, storage, ID } from '../lib/appwrite';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { databases, storage, ID } from "../lib/appwrite";
 
-// Async thunk for fetching products
+/* ---------- HELPERS ---------- */
+
+const getSellingPrice = (price, discountPercent) => {
+  return discountPercent
+    ? Number(price) - (Number(price) * Number(discountPercent) / 100)
+    : Number(price);
+};
+
+const normalizeSizes = (sizes) => {
+  if (Array.isArray(sizes)) return sizes;
+  if (typeof sizes === "string") {
+    return sizes.split(",").map((s) => s.trim());
+  }
+  return [];
+};
+
+const normalizeProduct = (p) => {
+  const imageUrls = (p.images || []).map((id) =>
+    storage.getFileView(
+      import.meta.env.VITE_APPWRITE_BUCKET_ID,
+      id
+    )
+  );
+  return {
+    ...p,
+    name: p.productName,
+    imageUrls,
+    image: imageUrls[0] || "",
+  };
+};
+
+/* ---------- FETCH PRODUCTS ---------- */
+
 export const fetchProducts = createAsyncThunk(
-  'products/fetchProducts',
+  "products/fetchProducts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await databases.listDocuments(
+      const res = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID
       );
-      return response.documents;
-    } catch (error) {
-      return rejectWithValue(error.message);
+      return res.documents;
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
   }
 );
 
-// Async thunk for fetching a single product
+/* ---------- FETCH SINGLE PRODUCT ---------- */
+
 export const fetchProductById = createAsyncThunk(
-  'products/fetchProductById',
+  "products/fetchProductById",
   async (productId, { rejectWithValue }) => {
     try {
-      const response = await databases.getDocument(
+      return await databases.getDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
         productId
       );
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message);
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
   }
 );
 
-// Async thunk for adding a product
+/* ---------- ADD PRODUCT ---------- */
+
 export const addProduct = createAsyncThunk(
-  'products/addProduct',
+  "products/addProduct",
   async (productData, { rejectWithValue }) => {
     try {
-      const { name, price, discountPrice, category, sizes, images, description, stock, gender } = productData;
+      const {
+        name,
+        mrp,
+        discountPercent,
+        category,
+        sizes,
+        images,
+        description,
+        stock,
+        gender,
+      } = productData;
 
-      // Calculate priceafterdiscount
-      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : parseFloat(price) * 0.9;
+      const sellingPrice = getSellingPrice(mrp, discountPercent);
 
-      // Upload images to Appwrite Storage
       const imageIds = [];
-      for (const file of images) {
-        const response = await storage.createFile(
+      for (const file of images || []) {
+        const uploaded = await storage.createFile(
           import.meta.env.VITE_APPWRITE_BUCKET_ID,
           ID.unique(),
           file
         );
-        imageIds.push(response.$id);
+        imageIds.push(uploaded.$id);
       }
 
-      // Create product document
-      const product = await databases.createDocument(
+      return await databases.createDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
         ID.unique(),
         {
           productName: name,
-          price: parseFloat(price),
-          discountPrice: discountPrice ? parseFloat(discountPrice) : null,
-          priceafterdiscount,
+          mrp: Number(mrp),
+          discountPercent: discountPercent ? Number(discountPercent) : null,
+          sellingPrice,
           category,
           gender,
-          sizes: sizes.split(',').map(s => s.trim()),
+          sizes: normalizeSizes(sizes),
           images: imageIds,
           description,
-          stock: parseInt(stock),
+          stock: Number(stock),
         }
       );
-
-      return product;
-    } catch (error) {
-      return rejectWithValue(error.message);
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
   }
 );
 
-// Async thunk for updating a product
+/* ---------- UPDATE PRODUCT ---------- */
+
 export const updateProduct = createAsyncThunk(
-  'products/updateProduct',
+  "products/updateProduct",
   async ({ productId, productData }, { rejectWithValue }) => {
     try {
-      const { name, price, discountPrice, category, sizes, images, description, stock, gender } = productData;
-
-      // Calculate priceafterdiscount
-      const priceafterdiscount = discountPrice ? parseFloat(discountPrice) : Math.round(parseFloat(price) * 0.9);
+      const {
+        name,
+        mrp,
+        discountPercent,
+        category,
+        sizes,
+        images,
+        description,
+        stock,
+        gender,
+      } = productData;
 
       const updateData = {
         productName: name,
-        price: parseFloat(price),
-        discountPrice: discountPrice ? parseFloat(discountPrice) : null,
-        priceafterdiscount,
+        mrp: Number(mrp),
+        discountPercent: discountPercent ? Number(discountPercent) : null,
+        sellingPrice: getSellingPrice(mrp, discountPercent),
         category,
         gender,
-        sizes: sizes.split(',').map(s => s.trim()),
+        sizes: normalizeSizes(sizes),
         description,
-        stock: parseInt(stock),
+        stock: Number(stock),
       };
 
-      // Handle images if provided
       if (images && images.length > 0) {
         const imageIds = [];
         for (const file of images) {
           if (file instanceof File) {
-            const response = await storage.createFile(
+            const uploaded = await storage.createFile(
               import.meta.env.VITE_APPWRITE_BUCKET_ID,
               ID.unique(),
               file
             );
-            imageIds.push(response.$id);
+            imageIds.push(uploaded.$id);
           } else {
-            imageIds.push(file); // Assume it's already an ID
+            imageIds.push(file);
           }
         }
         updateData.images = imageIds;
       }
 
-      const updatedProduct = await databases.updateDocument(
+      return await databases.updateDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
         productId,
         updateData
       );
-
-      return updatedProduct;
-    } catch (error) {
-      return rejectWithValue(error.message);
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
   }
 );
 
-// Async thunk for deleting a product
+/* ---------- DELETE PRODUCT ---------- */
+
 export const deleteProduct = createAsyncThunk(
-  'products/deleteProduct',
+  "products/deleteProduct",
   async (productId, { rejectWithValue }) => {
     try {
       await databases.deleteDocument(
@@ -146,14 +190,16 @@ export const deleteProduct = createAsyncThunk(
         productId
       );
       return productId;
-    } catch (error) {
-      return rejectWithValue(error.message);
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
   }
 );
 
+/* ---------- SLICE ---------- */
+
 const productSlice = createSlice({
-  name: 'products',
+  name: "products",
   initialState: {
     products: [],
     selectedProduct: null,
@@ -167,83 +213,77 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      /* FETCH ALL */
       .addCase(fetchProducts.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        // Process images to get download URLs and map fields
-        const processedProducts = action.payload.map(product => {
-          const imageUrls = product.images ? product.images.map(fileId =>
-            storage.getFileView(import.meta.env.VITE_APPWRITE_BUCKET_ID, fileId)
-          ) : [];
-          return {
-            ...product,
-            name: product.productName, // Map productName to name for consistency
-            imageUrls,
-            image: imageUrls[0] || ''
-          };
-        });
-        state.products = processedProducts;
+        state.products = action.payload.map(normalizeProduct);
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
+      /* FETCH ONE */
       .addCase(fetchProductById.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(fetchProductById.fulfilled, (state, action) => {
         state.loading = false;
-        // Process images to get download URLs and map fields
-        const product = action.payload;
-        const imageUrls = product.images ? product.images.map(fileId =>
-          storage.getFileView(import.meta.env.VITE_APPWRITE_BUCKET_ID, fileId)
-        ) : [];
-        state.selectedProduct = {
-          ...product,
-          name: product.productName, // Map productName to name for consistency
-          imageUrls,
-          image: imageUrls[0] || ''
-        };
+        state.selectedProduct = normalizeProduct(action.payload);
       })
       .addCase(fetchProductById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
+      /* ADD */
       .addCase(addProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(addProduct.fulfilled, (state) => {
+      .addCase(addProduct.fulfilled, (state, action) => {
         state.loading = false;
-        // Optionally, could refetch products or add to state, but for now just clear error
+        state.products.push(normalizeProduct(action.payload));
       })
       .addCase(addProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
+      /* UPDATE */
       .addCase(updateProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateProduct.fulfilled, (state) => {
+      .addCase(updateProduct.fulfilled, (state, action) => {
         state.loading = false;
-        // Optionally refetch or update state
+        const updatedProduct = normalizeProduct(action.payload);
+        const index = state.products.findIndex((prod) => prod.$id === action.payload.$id);
+        if (index !== -1) {
+          state.products[index] = updatedProduct;
+        }
+        if (state.selectedProduct && state.selectedProduct.$id === action.payload.$id) {
+          state.selectedProduct = updatedProduct;
+        }
       })
       .addCase(updateProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
+      /* DELETE */
       .addCase(deleteProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(deleteProduct.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = state.products.filter(product => product.$id !== action.payload);
+        state.products = state.products.filter(
+          (p) => p.$id !== action.payload
+        );
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;

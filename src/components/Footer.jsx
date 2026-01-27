@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   FaInstagramSquare,
   FaFacebook,
@@ -18,7 +19,7 @@ const footerLinks = [
   {
     title: "Quick Links",
     links: [
-      { name: "My Account", url: "/account" },
+      { name: "My Account", url: "/profile" },
       { name: "Order Tracking", url: "/order-tracking" },
       { name: "Returns & Exchange", url: "/returns" },
     ],
@@ -50,22 +51,22 @@ const socialLinks = [
 
 const Footer = () => {
   return (
-    <footer className="w-full px-10 py-6 text-[#2f2f2f] dark:text-white dark:bg-slate-700 duration-5-00">
+    <footer className="w-full px-6 md:px-10 py-8 text-[#2f2f2f] dark:text-white dark:bg-slate-700 transition-colors duration-300">
       <div className="flex flex-row-reverse max-md:flex-col gap-10">
-        
+        {/* Links */}
         <div className="flex flex-1 gap-6 max-md:justify-between">
           {footerLinks.map(({ title, links }) => (
             <div key={title} className="max-w-52 w-full">
-              <h2 className="font-bold mb-3">{title}</h2>
-              <ul className="space-y-1">
+              <h2 className="font-semibold mb-3">{title}</h2>
+              <ul className="space-y-1 text-sm">
                 {links.map(({ name, url }) => (
                   <li key={name}>
-                    <a
-                      href={url}
-                      className="hover:underline transition"
+                    <Link
+                      to={url}
+                      className="hover:underline transition-colors"
                     >
                       {name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -73,8 +74,11 @@ const Footer = () => {
           ))}
         </div>
 
+        {/* Social */}
         <div className="flex flex-col items-center md:items-start w-2/12 max-md:w-full">
-          <h2 className="font-bold mb-3 hidden md:block">Follow Us</h2>
+          <h2 className="font-semibold mb-3 hidden md:block">
+            Follow Us
+          </h2>
           <ul className="flex gap-4 max-md:justify-center w-full">
             {socialLinks.map(({ icon, label, url }) => (
               <li key={label}>
@@ -85,7 +89,7 @@ const Footer = () => {
                   aria-label={label}
                   className="hover:scale-110 transition-transform"
                 >
-                  {React.createElement(icon, { size: 20 })}
+                  {React.createElement(icon, { size: 22 })}
                 </a>
               </li>
             ))}
@@ -93,9 +97,13 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="mt-10 text-sm text-slate-500">
-        All Rights Reserved | © 2026{" "}
-        <span className="logo-letter-spacing">VELOURA</span>
+      {/* Copyright */}
+      <div className="mt-10 text-center text-xs text-slate-500">
+        © 2026{" "}
+        <span className="logo-letter-spacing font-semibold">
+          VELOURA
+        </span>{" "}
+        · All Rights Reserved
       </div>
     </footer>
   );

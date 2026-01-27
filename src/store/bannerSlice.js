@@ -1,15 +1,18 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { databases, storage, ID } from '../lib/appwrite';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import config from "../config.js";
+import { databases, storage, ID } from "../lib/appwrite";
 
-// Async thunk for fetching banners
+/* ---------------- FETCH BANNERS ---------------- */
+
 export const fetchBanners = createAsyncThunk(
-  'banners/fetchBanners',
+  "banners/fetchBanners",
   async (_, { rejectWithValue }) => {
     try {
       const response = await databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_BANNERS_COLLECTION_ID
+        config.appwriteDatabaseId,
+        config.appwriteBannersCollectionId
       );
+
       return response.documents;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -17,22 +20,27 @@ export const fetchBanners = createAsyncThunk(
   }
 );
 
-// Async thunk for updating a banner
-export const updateBanner = createAsyncThunk(
-  'banners/updateBanner',
-  async ({ bannerId, bannerData }, { rejectWithValue }) => {
-    try {
-      const { image, link } = bannerData;
+/* ---------------- UPDATE BANNER (ADMIN ONLY) ---------------- */
 
-      let imageId = null;
-      if (image && image instanceof File) {
-        // Upload new image
-        const response = await storage.createFile(
-          import.meta.env.VITE_APPWRITE_BUCKET_ID,
+export const updateBanner = createAsyncThunk(
+  "banners/updateBanner",
+  async ({ bannerId, bannerData, isAdmin }, { rejectWithValue }) => {
+    try {
+      if (!isAdmin) {
+        throw new Error("Unauthorized: Admin access required");
+      }
+
+      const { image, link } = bannerData;
+      let imageId;
+
+      /* Upload new image if changed */
+      if (image instanceof File) {
+        const upload = await storage.createFile(
+          config.appwriteBucketId,
           ID.unique(),
           image
         );
-        imageId = response.$id;
+        imageId = upload.$id;
       }
 
       const updateData = {};
@@ -40,8 +48,8 @@ export const updateBanner = createAsyncThunk(
       if (imageId) updateData.image = imageId;
 
       const updatedBanner = await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_BANNERS_COLLECTION_ID,
+        config.appwriteDatabaseId,
+        config.appwriteBannersCollectionId,
         bannerId,
         updateData
       );
@@ -53,8 +61,10 @@ export const updateBanner = createAsyncThunk(
   }
 );
 
+/* ---------------- SLICE ---------------- */
+
 const bannerSlice = createSlice({
-  name: 'banners',
+  name: "banners",
   initialState: {
     banners: [],
     loading: false,
@@ -67,33 +77,51 @@ const bannerSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+
+      /* FETCH */
       .addCase(fetchBanners.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchBanners.fulfilled, (state, action) => {
         state.loading = false;
-        // Process images to get download URLs
-        const processedBanners = action.payload.map(banner => {
-          const imageUrl = banner.image ? storage.getFileView(import.meta.env.VITE_APPWRITE_BUCKET_ID, banner.image) : null;
-          return {
-            ...banner,
-            imageUrl,
-          };
-        });
-        state.banners = processedBanners;
+
+        state.banners = action.payload.map((banner) => ({
+          ...banner,
+          imageUrl: banner.image
+            ? storage.getFilePreview(
+                config.appwriteBucketId,
+                banner.image
+              )
+            : null,
+        }));
       })
       .addCase(fetchBanners.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
+      /* UPDATE */
       .addCase(updateBanner.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateBanner.fulfilled, (state) => {
+      .addCase(updateBanner.fulfilled, (state, action) => {
         state.loading = false;
-        // Optionally refetch banners or update state
+
+        state.banners = state.banners.map((banner) =>
+          banner.$id === action.payload.$id
+            ? {
+                ...action.payload,
+                imageUrl: action.payload.image
+                  ? storage.getFilePreview(
+                      config.appwriteBucketId,
+                      action.payload.image
+                    )
+                  : null,
+              }
+            : banner
+        );
       })
       .addCase(updateBanner.rejected, (state, action) => {
         state.loading = false;
