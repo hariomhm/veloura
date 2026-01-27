@@ -1,0 +1,3 @@
+- [x] Update getSellingPrice in src/store/cartSlice.js to use sellingPrice, mrp, price
+- [x] Update getSellingPrice in src/pages/Cart.jsx to use sellingPrice, mrp, price
+- [ ] Test the cart page to ensure total and subtotal display correctly

@@ -8,9 +8,9 @@ const Cart = () => {
   const dispatch = useDispatch();
 
   const getSellingPrice = (product) =>
-    product.priceafterdiscount ||
-    product.discountPrice ||
-    Math.round(product.price * 0.9);
+    product.sellingPrice ||
+    product.mrp ||
+    product.price;
 
   const handleRemove = (productId, size) => {
     dispatch(removeFromCart({ productId, size }));

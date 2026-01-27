@@ -4,8 +4,8 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const getSellingPrice = (product) => {
   return (
-    product.priceafterdiscount ||
-    product.discountPrice ||
+    product.sellingPrice ||
+    product.mrp ||
     product.price
   );
 };
