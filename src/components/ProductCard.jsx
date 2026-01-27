@@ -11,6 +11,7 @@ const ProductCard = React.memo(({ product }) => {
   const productName = product.productName || product.name;
   const imageSrc = product.imageUrls ? product.imageUrls[0] : product.image;
   const discountedPrice = product.priceafterdiscount || product.discountPrice || Math.round(product.price * 0.9);
+  const discountPercentage = Math.round(((product.price - discountedPrice) / product.price) * 100);
 
   const handleAddToCart = useCallback((e) => {
     e.preventDefault();
@@ -22,8 +23,9 @@ const ProductCard = React.memo(({ product }) => {
       <img src={imageSrc} alt={productName} className="w-full h-48 object-cover" loading="lazy" />
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-2">{productName}</h2>
-        <p className="text-lg text-gray-500 line-through mb-1">{config.currencySymbol}{product.price}</p>
-        <p className="text-2xl font-bold text-green-600 mb-4">{config.currencySymbol}{discountedPrice}</p>
+        <p className="text-lg text-gray-500 line-through mb-1">{config.currencySymbol }{product.price}</p>
+        <p className="text-2xl font-bold text-green-600 mb-1">{config.currencySymbol}{discountedPrice}</p>
+        <p className="text-sm text-red-500 font-medium mb-4">{discountPercentage}% OFF</p>
         <button
           onClick={handleAddToCart}
           className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors flex items-center justify-center"

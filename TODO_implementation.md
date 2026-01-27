@@ -30,3 +30,4 @@
 
 ## Step 7: Testing
 - [x] Run the app and test all features
+- [x] Fix authentication bug in Checkout.jsx - incorrect auth state selector causing login redirects for logged-in users

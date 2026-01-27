@@ -65,7 +65,7 @@ const Checkout = () => {
   };
 
   const handleRazorpayPayment = async () => {
-    if (!user) {
+    if (!isLoggedIn || !user) {
       navigate('/login');
       return;
     }
@@ -135,7 +135,7 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) {
+    if (!isLoggedIn || !user) {
       navigate('/login');
       return;
     }
@@ -389,7 +389,7 @@ const Checkout = () => {
                 {paymentMethod === 'phonepe' && (
                   <div>
                     <button
-                      onClick={handleSubmit}
+                      onClick={handleRazorpayPayment}
                       disabled={loading}
                       className="w-full bg-purple-500 text-white py-3 px-4 rounded hover:bg-purple-600 transition-colors disabled:opacity-50"
                     >
@@ -400,7 +400,7 @@ const Checkout = () => {
                 {paymentMethod === 'googlepay' && (
                   <div>
                     <button
-                      onClick={handleSubmit}
+                      onClick={handleRazorpayPayment}
                       disabled={loading}
                       className="w-full bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
                     >
@@ -443,12 +443,15 @@ const Checkout = () => {
         <div>
           <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            {items.map(item => (
-              <div key={`${item.product.$id}-${item.size}`} className="flex justify-between mb-2">
-                <span>{item.product.name} ({item.size}) x{item.quantity}</span>
-                <span>{config.currencySymbol}{(item.product.price * item.quantity).toFixed(2)}</span>
-              </div>
-            ))}
+            {items.map(item => {
+              const discountedPrice = item.product.priceafterdiscount || item.product.discountPrice || Math.round(item.product.price * 0.9);
+              return (
+                <div key={`${item.product.$id}-${item.size}`} className="flex justify-between mb-2">
+                  <span>{item.product.name} ({item.size}) x{item.quantity}</span>
+                  <span>{config.currencySymbol}{(discountedPrice * item.quantity).toFixed(2)}</span>
+                </div>
+              );
+            })}
             <div className="border-t pt-2 mt-2">
               <div className="flex justify-between font-bold">
                 <span>Total:</span>
