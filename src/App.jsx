@@ -4,8 +4,9 @@ import { useSelector, useDispatch } from "react-redux";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Loading from "./components/Loading";
 
-import { login } from "./store/authSlice";
+import { login, setLoading } from "./store/authSlice";
 import authService from "./lib/auth";
 
 /* -------- PAGES -------- */
@@ -47,8 +48,9 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const { status, isAdmin, banned } = useSelector((state) => state.auth);
+  const { status, isAdmin, banned, loading } = useSelector((state) => state.auth);
 
+  if (loading) return null; // or a loading spinner
   if (!status) return <Navigate to="/login" replace />;
   if (banned) return <Navigate to="/" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -73,9 +75,12 @@ const App = () => {
         const user = await authService.getCurrentUser();
         if (user) {
           dispatch(login({ userData: user }));
+        } else {
+          dispatch(setLoading(false));
         }
       } catch {
         // no active session
+        dispatch(setLoading(false));
       }
     };
     loadUser();

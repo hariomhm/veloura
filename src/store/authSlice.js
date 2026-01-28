@@ -5,6 +5,7 @@ const initialState = {
   userData: null,
   isAdmin: false,
   banned: false,
+  loading: true,
 };
 
 const authSlice = createSlice({
@@ -16,6 +17,7 @@ const authSlice = createSlice({
 
       state.status = true;
       state.userData = user;
+      state.loading = false;
 
       // ✅ ROLE & FLAGS SHOULD COME FROM BACKEND
       state.isAdmin = user?.prefs?.role === "admin";
@@ -28,8 +30,12 @@ const authSlice = createSlice({
       state.isAdmin = false;
       state.banned = false;
     },
+
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
   },
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, logout, setLoading } = authSlice.actions;
 export default authSlice.reducer;
