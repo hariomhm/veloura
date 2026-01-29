@@ -4,7 +4,6 @@ import {
   FaBoxOpen,
   FaListAlt,
   FaShoppingBag,
-  FaImages,
   FaUsers,
 } from "react-icons/fa";
 
@@ -26,12 +25,6 @@ const dashboardCards = [
     description: "View and update order statuses.",
     path: "/admin/manage-orders",
     icon: FaShoppingBag,
-  },
-  {
-    title: "Manage Banners",
-    description: "Update homepage banners.",
-    path: "/admin/manage-banners",
-    icon: FaImages,
   },
   {
     title: "Manage Users",

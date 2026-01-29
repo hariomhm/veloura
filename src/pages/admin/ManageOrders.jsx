@@ -1,279 +1,108 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
 import { databases } from "../../lib/appwrite";
-import config from "../../config";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
-} from "@tanstack/react-table";
-
 const ManageOrders = () => {
-  const isAdmin = useSelector((state) => state.auth.isAdmin);
-
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [status, setStatus] = useState("");
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [updatingId, setUpdatingId] = useState(null);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-red-500">
-          Access Denied
-        </h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
-
-  /* ---------- FETCH ORDERS ---------- */
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID
       );
-
-      setOrders(response.documents);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch orders.");
+      setOrders(response.documents.reverse()); // Most recent first
+    } catch (error) {
+      console.error("Error fetching orders:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  /* ---------- UPDATE STATUS ---------- */
-  const updateOrderStatus = async (orderId, newStatus) => {
+  const updateStatus = async (orderId, newStatus) => {
     try {
-      setUpdatingId(orderId);
-
       await databases.updateDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
         orderId,
-        { status: newStatus }
+        { status: newStatus, updatedAt: new Date().toISOString() } // Add updatedAt field if needed
       );
-
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.$id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update order status.");
-    } finally {
-      setUpdatingId(null);
+      fetchOrders(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating order status:", error);
     }
   };
 
-  /* ---------- FILTERING ---------- */
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesSearch =
-        !searchTerm ||
-        order.$id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.userId?.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleStatusChange = (orderId, newStatus) => {
+    updateStatus(orderId, newStatus);
+  };
 
-      const matchesStatus =
-        !statusFilter || order.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, searchTerm, statusFilter]);
-
-  /* ---------- TABLE COLUMNS ---------- */
-  const columns = useMemo(
-    () => [
-      {
-        accessorKey: "$id",
-        header: "Order ID",
-        cell: ({ getValue }) => (
-          <span className="font-mono text-sm">{getValue()}</span>
-        ),
-      },
-      {
-        accessorKey: "userId",
-        header: "User ID",
-        cell: ({ getValue }) => (
-          <span className="font-mono text-sm">
-            {getValue() || "—"}
-          </span>
-        ),
-      },
-      {
-        accessorFn: (row) => row.totalAmount || row.total || 0,
-        header: "Total",
-        cell: ({ getValue }) =>
-          `${config.currencySymbol}${getValue()}`,
-      },
-      {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ getValue, row }) => (
-          <select
-            value={getValue()}
-            disabled={updatingId === row.original.$id}
-            onChange={(e) =>
-              updateOrderStatus(
-                row.original.$id,
-                e.target.value
-              )
-            }
-            className="px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600"
-          >
-            <option value="pending">Pending</option>
-            <option value="shipped">Shipped</option>
-            <option value="delivered">Delivered</option>
-          </select>
-        ),
-      },
-      {
-        accessorKey: "createdAt",
-        header: "Created",
-        cell: ({ getValue }) =>
-          getValue()
-            ? new Date(getValue()).toLocaleDateString()
-            : "—",
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <button
-            onClick={() => {
-              const order = row.original;
-              console.log("Order details:", order);
-              alert(
-                order.products
-                  ?.map(
-                    (p) =>
-                      `${p.name} (${p.size}) x${p.quantity} - ${config.currencySymbol}${p.price}`
-                  )
-                  .join("\n") || "No products"
-              );
-            }}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-          >
-            View Products
-          </button>
-        ),
-      },
-    ],
-    [updateOrderStatus, updatingId]
-  );
-
-  const table = useReactTable({
-    data: filteredOrders,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  /* ---------- STATES ---------- */
-  if (loading) {
-    return <div className="text-center py-12">Loading orders…</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12 text-red-500">
-        {error}
-      </div>
-    );
-  }
-
-  /* ---------- UI ---------- */
   return (
-    <div className="container mx-auto px-4 py-10">
+    <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Manage Orders</h1>
 
-      {/* SEARCH + FILTER */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
-        <input
-          type="text"
-          placeholder="Search by Order ID or User ID"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-        >
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
-        </select>
-      </div>
-
-      {/* TABLE */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler?.()}
-                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+      {loading ? (
+        <div className="text-center">Loading orders...</div>
+      ) : orders.length === 0 ? (
+        <div className="text-center">No orders found.</div>
+      ) : (
+        <div className="space-y-6">
+          {orders.map((order) => (
+            <div
+              key={order.$id}
+              className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl font-bold">Order #{order.$id}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {new Date(order.createdAt).toLocaleDateString()}{" "}
+                    {new Date(order.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-semibold">₹{order.total}</p>
+                  <select
+                    value={order.status || "pending"} // Default to "pending" if status is undefined
+                    onChange={(e) => handleStatusChange(order.$id, e.target.value)}
+                    className="mt-2 px-3 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
                   >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    {{
-                      asc: " 🔼",
-                      desc: " 🔽",
-                    }[header.column.getIsSorted()] ?? null}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                </div>
+              </div>
 
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No orders found.
-          </div>
-        )}
-      </div>
+              {/* PRODUCTS */}
+              {order.items && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-2">Products</h3>
+                  <ul className="space-y-1 text-sm">
+                    {order.items.map((item, index) => {
+                      const parsedItem = JSON.parse(item);
+                      return (
+                        <li key={index} className="flex justify-between">
+                          <span>
+                            {parsedItem.name} ({parsedItem.size}) × {parsedItem.quantity} - ₹{parsedItem.price * parsedItem.quantity} each
+                          </span>
+                          <span>₹{parsedItem.price * parsedItem.quantity}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

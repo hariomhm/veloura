@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchUsers, banUser, unbanUser } from "../../store/userSlice";
+import { fetchUsers, banUser, unbanUser, updateUserRole, updateUserStatus } from "../../store/userSlice";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,23 +10,9 @@ import {
 
 const ManageUsers = () => {
   const dispatch = useDispatch();
-
-  const isAdmin = useSelector((state) => state.auth.isAdmin);
   const { users, loading, error } = useSelector((state) => state.users);
 
   const [actionUserId, setActionUserId] = useState(null);
-
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-red-500">
-          Access Denied
-        </h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
 
   /* ---------- FETCH USERS ---------- */
   useEffect(() => {
@@ -34,23 +20,46 @@ const ManageUsers = () => {
   }, [dispatch]);
 
   /* ---------- ACTION HANDLERS ---------- */
-  const handleBan = async (userId) => {
+  const handleBan = useCallback(async (userId) => {
     try {
+      const banReason = prompt("Enter ban reason (optional):");
       setActionUserId(userId);
-      await dispatch(banUser(userId)).unwrap();
+      await dispatch(banUser({ userId, banReason })).unwrap();
     } catch (err) {
       alert(`Failed to ban user: ${err}`);
     } finally {
       setActionUserId(null);
     }
-  };
+  }, [dispatch]);
 
-  const handleUnban = async (userId) => {
+  const handleUnban = useCallback(async (userId) => {
     try {
       setActionUserId(userId);
       await dispatch(unbanUser(userId)).unwrap();
     } catch (err) {
       alert(`Failed to unban user: ${err}`);
+    } finally {
+      setActionUserId(null);
+    }
+  }, [dispatch]);
+
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      setActionUserId(userId);
+      await dispatch(updateUserRole({ userId, role: newRole })).unwrap();
+    } catch (err) {
+      alert(`Failed to update role: ${err}`);
+    } finally {
+      setActionUserId(null);
+    }
+  };
+
+  const handleStatusChange = async (userId, isActive) => {
+    try {
+      setActionUserId(userId);
+      await dispatch(updateUserStatus({ userId, isActive })).unwrap();
+    } catch (err) {
+      alert(`Failed to update status: ${err}`);
     } finally {
       setActionUserId(null);
     }
@@ -92,7 +101,7 @@ const ManageUsers = () => {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          const isBanned = row.original.banned;
+          const isBanned = row.original.isBanned;
           const isLoading = actionUserId === row.original.$id;
 
           return (
@@ -119,7 +128,7 @@ const ManageUsers = () => {
         },
       },
     ],
-    [actionUserId]
+    [actionUserId, handleBan, handleUnban]
   );
 
   const table = useReactTable({

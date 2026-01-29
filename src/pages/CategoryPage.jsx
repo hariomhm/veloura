@@ -2,19 +2,24 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProducts } from "../store/productSlice";
 import { useSearchParams } from "react-router-dom";
+
 import ProductFilters from "../components/ProductFilters";
 import ProductGrid from "../components/ProductGrid";
+import TopFilterBar from "../components/TopFilterBar";
+import FilterDrawer from "../components/FilterDrawer";
 import Loading from "../components/Loading";
 import Error from "../components/Error";
 
+import useFilteredProducts from "../hooks/useFilteredProducts";
+
 const CategoryPage = ({ gender, title }) => {
   const dispatch = useDispatch();
-  const { products, loading, error } = useSelector(
-    (state) => state.products
-  );
-
+  const { products, loading, error } = useSelector((s) => s.products);
   const [searchParams] = useSearchParams();
 
+  const [showFilters, setShowFilters] = useState(false);
+
+  /* FILTER STATE */
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(
     searchParams.get("category") || ""
@@ -24,14 +29,18 @@ const CategoryPage = ({ gender, title }) => {
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState("name");
 
-  /* Fetch only once */
+  const [priceRange, setPriceRange] = useState({
+    min: 0,
+    max: 5000,
+    value: 5000,
+  });
+
+  /* FETCH PRODUCTS */
   useEffect(() => {
-    if (!products.length) {
-      dispatch(fetchProducts());
-    }
+    if (!products.length) dispatch(fetchProducts());
   }, [dispatch, products.length]);
 
-  /* Derived filters */
+  /* FILTER OPTIONS */
   const categories = useMemo(
     () => [...new Set(products.map(p => p.category).filter(Boolean))],
     [products]
@@ -42,30 +51,8 @@ const CategoryPage = ({ gender, title }) => {
     [products]
   );
 
-  /* Filter + Sort */
-  const filteredProducts = useMemo(() => {
-    return products
-      .filter(p => {
-        const name = (p.productName || p.name || "").toLowerCase();
-        const desc = (p.description || "").toLowerCase();
-        const price = Number(p.price) || 0;
-
-        return (
-          p.gender === gender &&
-          (!searchTerm || name.includes(searchTerm.toLowerCase()) || desc.includes(searchTerm.toLowerCase())) &&
-          (!selectedCategory || p.category === selectedCategory) &&
-          (!selectedBrand || p.brand === selectedBrand) &&
-          (!minPrice || price >= Number(minPrice)) &&
-          (!maxPrice || price <= Number(maxPrice))
-        );
-      })
-      .sort((a, b) => {
-        if (sortBy === "price-low") return a.price - b.price;
-        if (sortBy === "price-high") return b.price - a.price;
-        return (a.productName || a.name || "")
-          .localeCompare(b.productName || b.name || "");
-      });
-  }, [
+  /* FILTERED PRODUCTS (gender locked) */
+  const filteredProducts = useFilteredProducts({
     products,
     gender,
     searchTerm,
@@ -73,24 +60,64 @@ const CategoryPage = ({ gender, title }) => {
     selectedBrand,
     minPrice,
     maxPrice,
-    sortBy
-  ]);
+    sortBy,
+    priceRange,
+  });
 
-  if (loading) return <Loading message="Loading products..." />;
-  if (error) return <Error message={`Error: ${error}`} />;
+  if (loading) return <Loading type="skeleton" />;
+  if (error) return <Error message={error} />;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">{title}</h1>
+    <div className="max-w-350 mx-auto px-4 py-6">
+      {/* BREADCRUMB */}
+      <div className="text-sm text-gray-500 mb-4">
+        Home / Collections /{" "}
+        <span className="text-gray-900 font-medium">{title}</span>
+      </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      {/* BANNER */}
+      {!Array.isArray(gender) && (
+        <section className="relative h-[50vh] mb-8">
+          <img
+            src={`/${gender.toLowerCase()}${gender.toLowerCase() === 'kids' ? '' : 's'}bannerimage.png`}
+            alt={title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <h1 className="text-4xl font-bold text-white">{title}</h1>
+          </div>
+        </section>
+      )}
+
+      {/* TOP FILTER BAR (same as Products) */}
+      <TopFilterBar
+        total={filteredProducts.length}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        onOpenFilters={() => setShowFilters(true)}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+      />
+
+      {/* PRODUCTS GRID */}
+      {filteredProducts.length ? (
+        <ProductGrid products={filteredProducts} />
+      ) : (
+        <div className="text-center py-20 text-gray-500">
+          No products found
+        </div>
+      )}
+
+      {/* FILTER DRAWER (mobile – SAME as Products) */}
+      <FilterDrawer
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+      >
         <ProductFilters
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
-          selectedGender={gender}
-          setSelectedGender={() => {}}
           selectedBrand={selectedBrand}
           setSelectedBrand={setSelectedBrand}
           minPrice={minPrice}
@@ -101,12 +128,9 @@ const CategoryPage = ({ gender, title }) => {
           setSortBy={setSortBy}
           categories={categories}
           brands={brands}
-          genders={[]}
-          showGenderFilter={false}
+          showGenderFilter={false} // gender is locked
         />
-
-        <ProductGrid products={filteredProducts} />
-      </div>
+      </FilterDrawer>
     </div>
   );
 };

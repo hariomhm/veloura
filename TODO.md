@@ -1,3 +1,3 @@
-- [x] Update getSellingPrice in src/store/cartSlice.js to use sellingPrice, mrp, price
-- [x] Update getSellingPrice in src/pages/Cart.jsx to use sellingPrice, mrp, price
-- [ ] Test the cart page to ensure total and subtotal display correctly
+- [x] Fix import in ProductDetail.jsx: change 'addToCartAsync' to 'addToCart'
+- [x] Add 'useNavigate' to the imports from 'react-router-dom'
+- [x] Add 'const navigate = useNavigate();' inside the ProductDetail component

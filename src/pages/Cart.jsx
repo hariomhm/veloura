@@ -1,10 +1,16 @@
+import { useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { removeFromCart, updateQuantity, clearCart } from "../store/cartSlice";
+import {
+  removeFromCart,
+  updateQuantity,
+  clearCart
+} from "../store/cartSlice";
 import { Link } from "react-router-dom";
 import config from "../config";
 
 const Cart = () => {
-  const { items, total } = useSelector((state) => state.cart);
+  const { items, totalPrice, loading, error } = useSelector((state) => state.cart);
+  const { userData } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
   const getSellingPrice = (product) =>
@@ -12,14 +18,32 @@ const Cart = () => {
     product.mrp ||
     product.price;
 
-  const handleRemove = (productId, size) => {
-    dispatch(removeFromCart({ productId, size }));
-  };
+  const handleRemove = useCallback((productId, size) => {
+    if (userData?.$id) {
+      dispatch(removeFromCartAsync({ userId: userData.$id, productId, size }));
+    }
+  }, [userData?.$id, dispatch]);
 
-  const handleQuantityChange = (productId, size, value) => {
+  const handleQuantityChange = useCallback((productId, size, value) => {
     const qty = Math.max(1, Number(value) || 1);
-    dispatch(updateQuantity({ productId, size, quantity: qty }));
-  };
+    if (userData?.$id) {
+      dispatch(updateQuantityAsync({ userId: userData.$id, productId, size, quantity: qty }));
+    }
+  }, [userData?.$id, dispatch]);
+
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
+        <Link
+          to="/products"
+          className="inline-block bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 transition"
+        >
+          Continue Shopping
+        </Link>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -52,9 +76,7 @@ const Cart = () => {
                 className="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
               >
                 <img
-                  src={
-                    item.product.imageUrls?.[0] || item.product.image
-                  }
+                  src={item.product.imageUrl?.[0] || "/placeholder.png"}
                   alt={item.product.name}
                   className="w-20 h-20 object-cover rounded"
                 />
@@ -105,7 +127,7 @@ const Cart = () => {
           })}
 
           <button
-            onClick={() => dispatch(clearCart())}
+            onClick={() => userData?.$id && dispatch(clearCartAsync(userData.$id))}
             className="text-sm bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
           >
             Clear Cart
@@ -120,7 +142,7 @@ const Cart = () => {
             <span>Subtotal</span>
             <span>
               {config.currencySymbol}
-              {total.toFixed(2)}
+              {totalPrice.toFixed(2)}
             </span>
           </div>
 
@@ -135,7 +157,7 @@ const Cart = () => {
             <span>Total</span>
             <span>
               {config.currencySymbol}
-              {total.toFixed(2)}
+              {totalPrice.toFixed(2)}
             </span>
           </div>
 

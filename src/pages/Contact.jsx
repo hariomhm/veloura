@@ -11,7 +11,7 @@ const Contact = () => {
 
   const [status, setStatus] = useState("idle");
 
-  const onSubmit = async (data) => {
+  const onSubmit = async () => {
     setStatus("loading");
 
     try {

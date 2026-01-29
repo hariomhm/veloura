@@ -21,11 +21,10 @@ const OrderTracking = () => {
       );
 
       setOrder(response);
-    } catch (err) {
+    } catch {
       setError("Order not found. Please check your Order ID.");
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
@@ -85,7 +84,7 @@ const OrderTracking = () => {
                   {order.status}
                 </span>
               </p>
-              <p><strong>Total:</strong> ₹{order.total}</p>
+              <p><strong>Total:</strong> ₹{order.totalPrice}</p>
               <p>
                 <strong>Ordered On:</strong>{" "}
                 {new Date(order.createdAt).toLocaleDateString()}
@@ -93,23 +92,26 @@ const OrderTracking = () => {
             </div>
 
             {/* PRODUCTS */}
-            {order.products && (
+            {order.items && (
               <>
                 <h3 className="text-lg font-semibold mt-6 mb-2">
                   Products
                 </h3>
                 <ul className="space-y-2">
-                  {order.products.map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex justify-between text-sm"
-                    >
-                      <span>
-                        {item.name} ({item.size}) × {item.quantity}
-                      </span>
-                      <span>₹{item.price}</span>
-                    </li>
-                  ))}
+                  {order.items.map((item, index) => {
+                    const parsedItem = JSON.parse(item);
+                    return (
+                      <li
+                        key={index}
+                        className="flex justify-between text-sm"
+                      >
+                        <span>
+                          {parsedItem.name} ({parsedItem.size}) × {parsedItem.quantity}
+                        </span>
+                        <span>₹{parsedItem.price}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}

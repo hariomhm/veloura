@@ -24,6 +24,11 @@ const ManageProducts = () => {
 
   const [deletingId, setDeletingId] = useState(null);
 
+  /* ---------- FETCH PRODUCTS ---------- */
+  useEffect(() => {
+    dispatch(fetchProducts());
+  }, [dispatch]);
+
   /* ---------- ADMIN GUARD ---------- */
   if (!isAdmin) {
     return (
@@ -35,11 +40,6 @@ const ManageProducts = () => {
       </div>
     );
   }
-
-  /* ---------- FETCH PRODUCTS ---------- */
-  useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
 
   /* ---------- ACTIONS ---------- */
   const handleEdit = useCallback(

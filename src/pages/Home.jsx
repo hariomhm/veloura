@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaShieldAlt,
   FaTruck,
@@ -14,7 +14,9 @@ import config from "../config";
 
 const Home = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { products, loading } = useSelector((state) => state.products);
+  const { userData } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -26,7 +28,16 @@ const Home = () => {
   );
 
   const handleAddToCart = (product) => {
-    dispatch(addToCart({ product }));
+    if (!userData?.$id) {
+      alert("Please login to add items to cart.");
+      return;
+    }
+    if (product.sizes?.length > 0) {
+      // Redirect to product detail if product has sizes
+      navigate(`/product/${product.$id}`);
+    } else {
+      dispatch(addToCartAsync({ userId: userData.$id, product }));
+    }
   };
 
   const getImageUrl = (product) => {
@@ -52,6 +63,7 @@ const Home = () => {
             src="/mensbannerimage.png"
             alt="Mens"
             className="w-full h-[70vh] object-cover"
+            loading="lazy"
           />
         </Link>
         <Link to="/womens">
@@ -59,6 +71,7 @@ const Home = () => {
             src="/womensbannerimage.png"
             alt="Womens"
             className="w-full h-[70vh] object-cover"
+            loading="lazy"
           />
         </Link>
         <Link to="/kids">
@@ -66,6 +79,7 @@ const Home = () => {
             src="/kidsbannerimage.png"
             alt="Kids"
             className="w-full h-[70vh] object-cover"
+            loading="lazy"
           />
         </Link>
       </section>

@@ -6,11 +6,11 @@ import config from "../config";
 const getSellingPrice = (product) => product.sellingPrice ?? product.price;
 
 const ProductCard = memo(({ product }) => {
-  const productName = product.productName || "Product";
+  const productName = product.name || "Product";
 
   const imageSrc =
     product.image ||
-    product.imageUrls?.[0] ||
+    product.imageUrl?.[0] ||
     "/placeholder-product.png";
 
   const mrp = product.mrp;
@@ -30,7 +30,7 @@ const ProductCard = memo(({ product }) => {
         <img
           src={imageSrc}
           alt={productName}
-          className="w-full aspect-[3/4] object-cover"
+          className="w-full aspect-3/4 object-cover"
           loading="lazy"
         />
       </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   fetchProductById,
   clearSelectedProduct,
@@ -11,12 +11,14 @@ import config from "../config";
 const ProductDetail = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const { selectedProduct, loading, error } = useSelector(
     (state) => state.products
   );
+  const { userData } = useSelector((state) => state.auth);
 
-  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedSize, setSelectedSize] = useState(selectedProduct?.sizes?.[0] || "");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
@@ -25,14 +27,27 @@ const ProductDetail = () => {
   }, [dispatch, id]);
 
   useEffect(() => {
-    if (selectedProduct?.sizes?.length) {
+    if (selectedProduct?.sizes?.length && !selectedSize) {
       setSelectedSize(selectedProduct.sizes[0]);
     }
   }, [selectedProduct]);
 
-  const handleAddToCart = () => {
+const handleAddToCart = () => {
+  if (!selectedSize) return;
+
+  dispatch(
+    addToCart({
+      product: selectedProduct,
+      size: selectedSize,
+    })
+  );
+};
+
+
+  const handleBuyNow = () => {
     if (!selectedSize) return;
     dispatch(addToCart({ product: selectedProduct, size: selectedSize }));
+    navigate('/checkout');
   };
 
   if (loading)
@@ -49,8 +64,8 @@ const ProductDetail = () => {
     return <div className="text-center py-10">Product not found</div>;
 
   const images =
-    selectedProduct.imageUrls?.length > 0
-      ? selectedProduct.imageUrls
+    selectedProduct.imageUrl?.length > 0
+      ? selectedProduct.imageUrl
       : ["/placeholder.png"];
 
   const discountedPrice = selectedProduct.sellingPrice || selectedProduct.mrp;
@@ -70,7 +85,7 @@ const ProductDetail = () => {
           <img
             src={images[currentImageIndex]}
             alt={selectedProduct.name}
-            className="w-full h-[420px] object-cover rounded-lg mb-4"
+            className="w-full h-105 object-cover rounded-lg mb-4"
           />
 
           {images.length > 1 && (
@@ -86,6 +101,7 @@ const ProductDetail = () => {
                       ? "border-blue-500"
                       : "border-gray-300"
                   }`}
+                  loading="lazy"
                 />
               ))}
             </div>
@@ -152,14 +168,23 @@ const ProductDetail = () => {
             {outOfStock ? "Out of Stock" : "In Stock"}
           </p>
 
-          {/* ADD TO CART */}
-          <button
-            onClick={handleAddToCart}
-            disabled={outOfStock}
-            className="bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Add to Cart
-          </button>
+          {/* BUTTONS */}
+          <div className="flex gap-4">
+            <button
+              onClick={handleAddToCart}
+              disabled={outOfStock}
+              className="bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add to Cart
+            </button>
+            <button
+              onClick={handleBuyNow}
+              disabled={outOfStock}
+              className="bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Buy Now
+            </button>
+          </div>
         </div>
       </div>
     </div>

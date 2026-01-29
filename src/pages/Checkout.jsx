@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { clearCart } from "../store/cartSlice";
-import { databases, functions } from "../lib/appwrite";
-import { ID } from "appwrite";
+import { clearCartAsync, clearCart } from "../store/cartSlice";
+import { functions, databases, ID } from "../lib/appwrite";
+import config from "../config";
 
 const Checkout = () => {
-  const { items, total } = useSelector((state) => state.cart);
+  const { items, totalPrice } = useSelector((state) => state.cart);
   const user = useSelector((state) => state.auth.userData);
   const isLoggedIn = useSelector((state) => state.auth.status);
 
@@ -23,6 +23,8 @@ const Checkout = () => {
     zipCode: "",
   });
 
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -38,11 +40,25 @@ const Checkout = () => {
 
   const getPrice = (p) => p.sellingPrice || p.mrp;
 
+  const validateShipping = () => {
+    const newErrors = {};
+    if (!shipping.name.trim()) newErrors.name = "Name is required";
+    if (!shipping.email.trim()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(shipping.email)) newErrors.email = "Email is invalid";
+    if (!shipping.address.trim()) newErrors.address = "Address is required";
+    if (!shipping.city.trim()) newErrors.city = "City is required";
+    if (!shipping.zipCode.trim()) newErrors.zipCode = "Zip code is required";
+    else if (!/^\d{5,6}$/.test(shipping.zipCode)) newErrors.zipCode = "Zip code must be 5-6 digits";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const createOrder = async () => {
     const res = await functions.createExecution(
-      import.meta.env.VITE_RAZORPAY_FUNCTION_ID,
+      config.razorpayFunctionId,
       JSON.stringify({
-        amount: Math.round(total), // 👈 PAISA
+        amount: totalPrice, // INR
       })
     );
 
@@ -66,7 +82,7 @@ const Checkout = () => {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: config.razorpayKeyId,
         order_id: order.id,
         amount: order.amount,
         currency: "INR",
@@ -80,19 +96,20 @@ const Checkout = () => {
 
         handler: async (response) => {
           await databases.createDocument(
-            import.meta.env.VITE_APPWRITE_DATABASE_ID,
-            import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
+            config.appwriteDatabaseId,
+            config.appwriteOrdersCollectionId,
             ID.unique(),
             {
               userId: user.$id,
-              products: items.map((i) => ({
+              items: items.map((i) => JSON.stringify({
                 productId: i.product.$id,
-                name: i.product.name,
+                name: i.product.productName,
+                image: i.product.image,
                 size: i.size,
+                price: i.product.sellingPrice || i.product.price,
                 quantity: i.quantity,
-                price: getPrice(i.product),
               })),
-              total,
+              totalPrice,
               paymentId: response.razorpay_payment_id,
               orderId: response.razorpay_order_id,
               status: "paid",
@@ -101,7 +118,7 @@ const Checkout = () => {
             }
           );
 
-          dispatch(clearCart());
+          dispatch(clearCartAsync(user.$id));
           navigate("/order-success");
         },
 
@@ -125,21 +142,25 @@ const Checkout = () => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setStep("payment");
+            if (validateShipping()) {
+              setStep("payment");
+            }
           }}
           className="max-w-xl space-y-4"
         >
           {["name", "email", "address", "city", "zipCode"].map((f) => (
-            <input
-              key={f}
-              required
-              placeholder={f.toUpperCase()}
-              value={shipping[f]}
-              onChange={(e) =>
-                setShipping({ ...shipping, [f]: e.target.value })
-              }
-              className="w-full p-3 border rounded"
-            />
+            <div key={f}>
+              <input
+                required
+                placeholder={f.toUpperCase()}
+                value={shipping[f]}
+                onChange={(e) =>
+                  setShipping({ ...shipping, [f]: e.target.value })
+                }
+                className={`w-full p-3 border rounded ${errors[f] ? "border-red-500" : ""}`}
+              />
+              {errors[f] && <p className="text-red-500 text-sm mt-1">{errors[f]}</p>}
+            </div>
           ))}
 
           <button className="w-full bg-black text-white py-3 rounded">
@@ -155,7 +176,7 @@ const Checkout = () => {
             disabled={loading}
             className="w-full bg-green-600 text-white py-4 rounded text-lg"
           >
-            {loading ? "Processing..." : `Pay ₹${total}`}
+            {loading ? "Processing..." : `Pay ₹${totalPrice}`}
           </button>
 
           <button

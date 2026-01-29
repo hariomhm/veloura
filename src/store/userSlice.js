@@ -20,13 +20,13 @@ export const fetchUsers = createAsyncThunk(
 // Async thunk for banning a user
 export const banUser = createAsyncThunk(
   'users/banUser',
-  async (userId, { rejectWithValue }) => {
+  async ({ userId, banReason }, { rejectWithValue }) => {
     try {
       const updatedUser = await databases.updateDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
         userId,
-        { banned: true }
+        { isBanned: true, banReason: banReason || '' }
       );
       return updatedUser;
     } catch (error) {
@@ -44,7 +44,43 @@ export const unbanUser = createAsyncThunk(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
         userId,
-        { banned: false }
+        { isBanned: false, banReason: '' }
+      );
+      return updatedUser;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Async thunk for updating user role
+export const updateUserRole = createAsyncThunk(
+  'users/updateUserRole',
+  async ({ userId, role }, { rejectWithValue }) => {
+    try {
+      const updatedUser = await databases.updateDocument(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
+        userId,
+        { role }
+      );
+      return updatedUser;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Async thunk for updating user status
+export const updateUserStatus = createAsyncThunk(
+  'users/updateUserStatus',
+  async ({ userId, isActive }, { rejectWithValue }) => {
+    try {
+      const updatedUser = await databases.updateDocument(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
+        userId,
+        { isActive }
       );
       return updatedUser;
     } catch (error) {
@@ -100,6 +136,28 @@ const userSlice = createSlice({
         // Optionally update user in state
       })
       .addCase(unbanUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateUserRole.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserRole.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(updateUserRole.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateUserStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserStatus.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(updateUserStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

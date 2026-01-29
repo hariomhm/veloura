@@ -1,76 +1,40 @@
-import config from "../config.js";
-import { Client, Account, ID } from "appwrite";
+import { account, ID } from "./appwrite";
 
-export class AuthService {
-  constructor() {
-    this.client = new Client();
-
-    this.client
-      .setEndpoint(config.appwriteUrl)
-      .setProject(config.appwriteProjectId);
-
-    this.account = new Account(this.client);
-  }
-
-  /* -------- CREATE ACCOUNT -------- */
-
-  async createAccount({ email, password, name }) {
+const authService = {
+  // Get current user
+  getCurrentUser: async () => {
+    if (!localStorage.getItem('isLoggedIn')) return null;
     try {
-      const userAccount = await this.account.create(
-        ID.unique(),
-        email,
-        password,
-        name
-      );
-
-      if (userAccount) {
-        // Auto-login after signup
-        return this.login({ email, password });
-      }
-
-      return userAccount;
-    } catch (error) {
-      console.error("Create account error:", error);
-      throw error;
-    }
-  }
-
-  /* -------- LOGIN -------- */
-
-  async login({ email, password }) {
-    try {
-      return await this.account.createEmailPasswordSession(
-        email,
-        password
-      );
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
-  }
-
-  /* -------- CURRENT USER -------- */
-
-  async getCurrentUser() {
-    try {
-      return await this.account.get();
-    } catch (error) {
+      return await account.get();
+    } catch {
+      localStorage.removeItem('isLoggedIn');
       return null;
     }
-  }
+  },
 
-  /* -------- LOGOUT -------- */
+  // Create account
+  createAccount: async (email, password, name) => {
+    return await account.create(ID.unique(), email, password, name);
+  },
 
-  async logout() {
-    try {
-      await this.account.deleteSessions();
-      return true;
-    } catch (error) {
-      console.error("Logout error:", error);
-      return false;
-    }
-  }
-}
+  // Login
+  login: async (email, password) => {
+    const session = await account.createEmailPasswordSession(email, password);
+    localStorage.setItem('isLoggedIn', 'true');
+    return session;
+  },
 
-const authService = new AuthService();
+  // Logout
+  logout: async () => {
+    await account.deleteSession("current");
+    localStorage.removeItem('isLoggedIn');
+  },
+
+  // Update profile
+  updateProfile: async (profileData) => {
+    await account.updatePrefs(profileData);
+    return true;
+  },
+};
+
 export default authService;

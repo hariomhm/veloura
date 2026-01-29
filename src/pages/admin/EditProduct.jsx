@@ -24,18 +24,6 @@ const EditProduct = () => {
   const [imageFiles, setImageFiles] = useState([]);
   const hasSubmitted = useRef(false);
 
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-red-500">
-          Access Denied
-        </h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
-
   /* ---------- FETCH PRODUCT ---------- */
   useEffect(() => {
     if (productId) {
@@ -48,17 +36,38 @@ const EditProduct = () => {
     if (!selectedProduct) return;
 
     setValue("name", selectedProduct.productName || selectedProduct.name);
-    setValue("price", selectedProduct.price);
-    setValue("discountPrice", selectedProduct.discountPrice || "");
+    setValue("mrp", selectedProduct.mrp);
+    setValue("discountPercent", selectedProduct.discountPercent || "");
     setValue("category", selectedProduct.category);
     setValue("gender", selectedProduct.gender);
+    setValue("productType", selectedProduct.productType);
     setValue(
       "sizes",
       selectedProduct.sizes?.join(", ") || ""
     );
     setValue("description", selectedProduct.description);
     setValue("stock", selectedProduct.stock);
+    setValue("color", selectedProduct.color || "");
+    setValue("material", selectedProduct.material || "");
+    setValue("pattern", selectedProduct.pattern || "");
+    setValue("neckType", selectedProduct.neckType || "");
+    setValue("sleeveLength", selectedProduct.sleeveLength || "");
+    setValue("washCare", selectedProduct.washCare || "");
+    setValue("countryOfOrigin", selectedProduct.countryOfOrigin || "");
+    setValue("isFeatured", selectedProduct.isFeatured || false);
   }, [selectedProduct, setValue]);
+
+  /* ---------- ADMIN GUARD ---------- */
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4 text-red-500">
+          Access Denied
+        </h1>
+        <p>You do not have permission to access this page.</p>
+      </div>
+    );
+  }
 
   /* ---------- HANDLERS ---------- */
   const handleImageChange = (e) => {
@@ -218,6 +227,100 @@ const EditProduct = () => {
             {...register("description", { required: true })}
             className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
           />
+        </div>
+
+        {/* PRODUCT TYPE */}
+        <div>
+          <label className="block mb-1 font-medium">Product Type</label>
+          <input
+            type="text"
+            {...register("productType", { required: "Product type is required" })}
+            className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+          />
+          {errors.productType && (
+            <p className="text-red-500 text-sm">{errors.productType.message}</p>
+          )}
+        </div>
+
+        {/* OPTIONAL FIELDS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Color (optional)</label>
+            <input
+              type="text"
+              {...register("color")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Material (optional)</label>
+            <input
+              type="text"
+              {...register("material")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Pattern (optional)</label>
+            <input
+              type="text"
+              {...register("pattern")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Neck Type (optional)</label>
+            <input
+              type="text"
+              {...register("neckType")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Sleeve Length (optional)</label>
+            <input
+              type="text"
+              {...register("sleeveLength")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Wash Care (optional)</label>
+            <input
+              type="text"
+              {...register("washCare")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Country of Origin (optional)</label>
+            <input
+              type="text"
+              {...register("countryOfOrigin")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Is Featured</label>
+            <input
+              type="checkbox"
+              {...register("isFeatured")}
+              className="w-4 h-4"
+            />
+          </div>
         </div>
 
         {/* STOCK */}

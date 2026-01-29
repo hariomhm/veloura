@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { login } from "../store/authSlice";
-import { account } from "../lib/appwrite";
+import authService from "../lib/auth";
 
 const Login = () => {
   const {
@@ -24,16 +24,14 @@ const Login = () => {
     setError("");
 
     try {
-      await account.createEmailPasswordSession(
-        data.email.trim(),
-        data.password
-      );
+      await authService.login(data.email.trim(), data.password);
 
-      const user = await account.get();
+      const user = await authService.getCurrentUser();
 
       dispatch(login({ userData: user }));
       navigate("/");
     } catch (err) {
+      console.log("Login error:", err); // Added for debugging
       let message = "Login failed. Please try again.";
 
       if (err?.code === 401) {

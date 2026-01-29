@@ -18,7 +18,7 @@ const normalizeSizes = (sizes) => {
 };
 
 const normalizeProduct = (p) => {
-  const imageUrls = (p.images || []).map((id) =>
+  const imageUrl = (p.imageUrl || []).map((id) =>
     storage.getFileView(
       import.meta.env.VITE_APPWRITE_BUCKET_ID,
       id
@@ -26,9 +26,8 @@ const normalizeProduct = (p) => {
   );
   return {
     ...p,
-    name: p.productName,
-    imageUrls,
-    image: imageUrls[0] || "",
+    imageUrl,
+    image: imageUrl[0] || "",
   };
 };
 
@@ -82,9 +81,19 @@ export const addProduct = createAsyncThunk(
         description,
         stock,
         gender,
+        color,
+        material,
+        pattern,
+        neckType,
+        sleeveLength,
+        washCare,
+        countryOfOrigin,
+        isFeatured,
+        productType,
       } = productData;
 
       const sellingPrice = getSellingPrice(mrp, discountPercent);
+      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
       const imageIds = [];
       for (const file of images || []) {
@@ -101,16 +110,28 @@ export const addProduct = createAsyncThunk(
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
         ID.unique(),
         {
-          productName: name,
+          name,
           mrp: Number(mrp),
           discountPercent: discountPercent ? Number(discountPercent) : null,
           sellingPrice,
           category,
           gender,
           sizes: normalizeSizes(sizes),
-          images: imageIds,
+          imageUrl: imageIds,
           description,
           stock: Number(stock),
+          slug,
+          color,
+          material,
+          pattern,
+          neckType,
+          sleeveLength,
+          washCare,
+          countryOfOrigin,
+          isFeatured: isFeatured || false,
+          rating: 0,
+          reviewCount: 0,
+          productType,
         }
       );
     } catch (err) {
@@ -135,10 +156,19 @@ export const updateProduct = createAsyncThunk(
         description,
         stock,
         gender,
+        color,
+        material,
+        pattern,
+        neckType,
+        sleeveLength,
+        washCare,
+        countryOfOrigin,
+        isFeatured,
+        productType,
       } = productData;
 
       const updateData = {
-        productName: name,
+        name,
         mrp: Number(mrp),
         discountPercent: discountPercent ? Number(discountPercent) : null,
         sellingPrice: getSellingPrice(mrp, discountPercent),
@@ -147,7 +177,20 @@ export const updateProduct = createAsyncThunk(
         sizes: normalizeSizes(sizes),
         description,
         stock: Number(stock),
+        color,
+        material,
+        pattern,
+        neckType,
+        sleeveLength,
+        washCare,
+        countryOfOrigin,
+        isFeatured,
+        productType,
       };
+
+      if (name) {
+        updateData.slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      }
 
       if (images && images.length > 0) {
         const imageIds = [];
@@ -163,7 +206,7 @@ export const updateProduct = createAsyncThunk(
             imageIds.push(file);
           }
         }
-        updateData.images = imageIds;
+        updateData.imageUrl = imageIds;
       }
 
       return await databases.updateDocument(

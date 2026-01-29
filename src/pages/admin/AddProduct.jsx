@@ -196,6 +196,100 @@ const AddProduct = () => {
           )}
         </div>
 
+        {/* PRODUCT TYPE */}
+        <div>
+          <label className="block mb-1 font-medium">Product Type</label>
+          <input
+            type="text"
+            {...register("productType", { required: "Product type is required" })}
+            className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+          />
+          {errors.productType && (
+            <p className="text-red-500 text-sm">{errors.productType.message}</p>
+          )}
+        </div>
+
+        {/* OPTIONAL FIELDS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Color (optional)</label>
+            <input
+              type="text"
+              {...register("color")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Material (optional)</label>
+            <input
+              type="text"
+              {...register("material")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Pattern (optional)</label>
+            <input
+              type="text"
+              {...register("pattern")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Neck Type (optional)</label>
+            <input
+              type="text"
+              {...register("neckType")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Sleeve Length (optional)</label>
+            <input
+              type="text"
+              {...register("sleeveLength")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Wash Care (optional)</label>
+            <input
+              type="text"
+              {...register("washCare")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Country of Origin (optional)</label>
+            <input
+              type="text"
+              {...register("countryOfOrigin")}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Is Featured</label>
+            <input
+              type="checkbox"
+              {...register("isFeatured")}
+              className="w-4 h-4"
+            />
+          </div>
+        </div>
+
         {/* STOCK */}
         <div>
           <label className="block mb-1 font-medium">Stock</label>
