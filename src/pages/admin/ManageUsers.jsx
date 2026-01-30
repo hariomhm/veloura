@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchUsers, banUser, unbanUser, updateUserRole, updateUserStatus } from "../../store/userSlice";
+import { fetchUsers, banUser, unbanUser, updateUserRole } from "../../store/userSlice";
+import useToast from "../../hooks/useToast";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,6 +12,7 @@ import {
 const ManageUsers = () => {
   const dispatch = useDispatch();
   const { users, loading, error } = useSelector((state) => state.users);
+  const { error: showError } = useToast();
 
   const [actionUserId, setActionUserId] = useState(null);
 
@@ -26,44 +28,38 @@ const ManageUsers = () => {
       setActionUserId(userId);
       await dispatch(banUser({ userId, banReason })).unwrap();
     } catch (err) {
-      alert(`Failed to ban user: ${err}`);
+      showError(`Failed to ban user: ${err}`);
     } finally {
       setActionUserId(null);
     }
-  }, [dispatch]);
+  }, [dispatch, showError]);
 
   const handleUnban = useCallback(async (userId) => {
     try {
       setActionUserId(userId);
       await dispatch(unbanUser(userId)).unwrap();
     } catch (err) {
-      alert(`Failed to unban user: ${err}`);
+      showError(`Failed to unban user: ${err}`);
     } finally {
       setActionUserId(null);
     }
-  }, [dispatch]);
+  }, [dispatch, showError]);
 
-  const handleRoleChange = async (userId, newRole) => {
+  const handleToggleRole = useCallback(async (userId, currentRole) => {
     try {
+      const newRole = currentRole === "admin" ? "user" : "admin";
       setActionUserId(userId);
       await dispatch(updateUserRole({ userId, role: newRole })).unwrap();
+      // Refetch users to update the table
+      dispatch(fetchUsers());
     } catch (err) {
-      alert(`Failed to update role: ${err}`);
+      showError(`Failed to update user role: ${err}`);
     } finally {
       setActionUserId(null);
     }
-  };
+  }, [dispatch, showError]);
 
-  const handleStatusChange = async (userId, isActive) => {
-    try {
-      setActionUserId(userId);
-      await dispatch(updateUserStatus({ userId, isActive })).unwrap();
-    } catch (err) {
-      alert(`Failed to update status: ${err}`);
-    } finally {
-      setActionUserId(null);
-    }
-  };
+
 
   /* ---------- TABLE COLUMNS ---------- */
   const columns = useMemo(
@@ -83,6 +79,27 @@ const ManageUsers = () => {
         cell: ({ getValue }) => (
           <span className="font-mono text-sm">{getValue()}</span>
         ),
+      },
+      {
+        accessorKey: "role",
+        header: "Role",
+        cell: ({ getValue, row }) => {
+          const role = getValue() || "user";
+          const isLoading = actionUserId === row.original.$id;
+          return (
+            <button
+              onClick={() => handleToggleRole(row.original.$id, role)}
+              disabled={isLoading}
+              className={`px-3 py-1 rounded text-sm text-white disabled:opacity-50 ${
+                role === "admin"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-600 hover:bg-gray-700"
+              }`}
+            >
+              {isLoading ? "Updating…" : role === "admin" ? "Admin" : "User"}
+            </button>
+          );
+        },
       },
       {
         accessorKey: "banned",
@@ -128,7 +145,7 @@ const ManageUsers = () => {
         },
       },
     ],
-    [actionUserId, handleBan, handleUnban]
+    [actionUserId, handleBan, handleUnban, handleToggleRole]
   );
 
   const table = useReactTable({

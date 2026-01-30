@@ -6,6 +6,7 @@ import {
   deleteProduct,
 } from "../../store/productSlice";
 import config from "../../config";
+import useToast from "../../hooks/useToast";
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,6 +22,7 @@ const ManageProducts = () => {
   const { products, loading, error } = useSelector(
     (state) => state.products
   );
+  const { error: showError } = useToast();
 
   const [deletingId, setDeletingId] = useState(null);
 
@@ -28,18 +30,6 @@ const ManageProducts = () => {
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
-
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-red-500">
-          Access Denied
-        </h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
 
   /* ---------- ACTIONS ---------- */
   const handleEdit = useCallback(
@@ -58,7 +48,7 @@ const ManageProducts = () => {
       setDeletingId(productId);
       await dispatch(deleteProduct(productId)).unwrap();
     } catch (err) {
-      alert(`Failed to delete product: ${err}`);
+      showError(`Failed to delete product: ${err}`);
     } finally {
       setDeletingId(null);
     }
@@ -134,6 +124,18 @@ const ManageProducts = () => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  /* ---------- ADMIN GUARD ---------- */
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4 text-red-500">
+          Access Denied
+        </h1>
+        <p>You do not have permission to access this page.</p>
+      </div>
+    );
+  }
 
   /* ---------- STATES ---------- */
   if (loading) {

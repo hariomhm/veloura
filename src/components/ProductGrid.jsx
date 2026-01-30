@@ -1,6 +1,7 @@
+import { memo } from "react";
 import ProductCard from "./ProductCard";
 
-const ProductGrid = ({ products = [] }) => {
+const ProductGrid = memo(({ products = [] }) => {
   if (!products.length) {
     return (
       <main className="w-full lg:w-3/4 flex items-center justify-center py-20">
@@ -20,6 +21,8 @@ const ProductGrid = ({ products = [] }) => {
       </div>
     </main>
   );
-};
+});
+
+ProductGrid.displayName = "ProductGrid";
 
 export default ProductGrid;

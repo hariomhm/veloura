@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { addProduct } from "../../store/productSlice";
+import useToast from "../../hooks/useToast";
+import AdminGuard from "../../components/AdminGuard";
 
 const AddProduct = () => {
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.products);
-  const isAdmin = useSelector((state) => state.auth.isAdmin);
+  const { error: showError, success } = useToast();
 
   const {
     register,
@@ -18,15 +20,22 @@ const AddProduct = () => {
   const [imageFiles, setImageFiles] = useState([]);
   const hasSubmitted = useRef(false);
 
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
+  /* ---------- SIDE EFFECTS ---------- */
+  useEffect(() => {
+    if (!hasSubmitted.current) return;
+
+    if (!loading && !error) {
+      success("Product added successfully!");
+      reset();
+      setImageFiles([]);
+      hasSubmitted.current = false;
+    }
+
+    if (error) {
+      showError(`Failed to add product: ${error}`);
+      hasSubmitted.current = false;
+    }
+  }, [loading, error, reset, success, showError]);
 
   /* ---------- HANDLERS ---------- */
   const handleImageChange = (e) => {
@@ -35,7 +44,7 @@ const AddProduct = () => {
 
   const onSubmit = (data) => {
     if (!imageFiles.length) {
-      alert("Please upload at least one product image.");
+      showError("Please upload at least one product image.");
       return;
     }
 
@@ -49,32 +58,16 @@ const AddProduct = () => {
     );
   };
 
-  /* ---------- SIDE EFFECTS ---------- */
-  useEffect(() => {
-    if (!hasSubmitted.current) return;
-
-    if (!loading && !error) {
-      alert("Product added successfully!");
-      reset();
-      setImageFiles([]);
-      hasSubmitted.current = false;
-    }
-
-    if (error) {
-      alert(`Failed to add product: ${error}`);
-      hasSubmitted.current = false;
-    }
-  }, [loading, error, reset]);
-
   /* ---------- UI ---------- */
   return (
-    <div className="container mx-auto px-4 py-10">
-      <h1 className="text-3xl font-bold mb-8">Add New Product</h1>
+    <AdminGuard>
+      <div className="container mx-auto px-4 py-10">
+        <h1 className="text-3xl font-bold mb-8">Add New Product</h1>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
-      >
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
+        >
         {/* PRODUCT NAME */}
         <div>
           <label className="block mb-1 font-medium">Product Name</label>
@@ -109,13 +102,12 @@ const AddProduct = () => {
 
           <div>
             <label className="block mb-1 font-medium">
-              Discount Percent (optional)
+              Discount Percent (%) (optional)
             </label>
             <input
               type="number"
               min="0"
-              max="100"
-              step="1"
+              step="0.01"
               {...register("discountPercent")}
               className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
             />
@@ -143,10 +135,10 @@ const AddProduct = () => {
             className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
           >
             <option value="">Select Gender</option>
-            <option value="Men">Men</option>
-            <option value="Women">Women</option>
-            <option value="Unisex">Unisex</option>
-            <option value="Kids">Kids</option>
+            <option value="men">Men</option>
+            <option value="women">Women</option>
+            <option value="unisex">Unisex</option>
+            <option value="kids">Kids</option>
           </select>
           {errors.gender && (
             <p className="text-red-500 text-sm">{errors.gender.message}</p>
@@ -317,6 +309,7 @@ const AddProduct = () => {
         </button>
       </form>
     </div>
+    </AdminGuard>
   );
 };
 

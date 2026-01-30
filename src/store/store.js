@@ -3,8 +3,10 @@ import themeSlice from './themeSlice'
 import authSlice from './authSlice'
 import productSlice from './productSlice'
 import cartSlice from './cartSlice'
-import bannerSlice from './bannerSlice'
+import orderSlice from './orderSlice'
 import userSlice from './userSlice'
+import wishlistSlice from './wishlistSlice'
+import checkoutSlice from './checkoutSlice'
 
 const store = configureStore({
     reducer:{
@@ -12,8 +14,10 @@ const store = configureStore({
         auth: authSlice,
         products: productSlice,
         cart: cartSlice,
-        banners: bannerSlice,
+        orders: orderSlice,
         users: userSlice,
+        wishlist: wishlistSlice,
+        checkout: checkoutSlice,
     }
 });
 

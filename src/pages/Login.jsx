@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { login } from "../store/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../store/authSlice";
+import { setUser } from "../store/cartSlice";
 import authService from "../lib/auth";
+import useToast from "../hooks/useToast";
 
 const Login = () => {
   const {
@@ -13,25 +15,32 @@ const Login = () => {
   } = useForm();
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { error } = useToast();
+  const { isAuthenticated, loading: authLoading } = useSelector((state) => state.auth);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const onSubmit = async (data) => {
     setLoading(true);
-    setError("");
 
     try {
-      await authService.login(data.email.trim(), data.password);
+      const result = await dispatch(loginUser({
+        email: data.email.trim().toLowerCase(),
+        password: data.password.trim()
+      })).unwrap();
 
-      const user = await authService.getCurrentUser();
-
-      dispatch(login({ userData: user }));
+      dispatch(setUser(result.$id));
       navigate("/");
     } catch (err) {
-      console.log("Login error:", err); // Added for debugging
       let message = "Login failed. Please try again.";
 
       if (err?.code === 401) {
@@ -40,7 +49,7 @@ const Login = () => {
         message = err.message;
       }
 
-      setError(message);
+      error(message);
     } finally {
       setLoading(false);
     }
@@ -59,11 +68,6 @@ const Login = () => {
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
 
           {/* Email */}
           <div>
@@ -77,6 +81,10 @@ const Login = () => {
               className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               {...register("email", {
                 required: "Email is required",
+                pattern: {
+                  value: /^\S+@\S+$/i,
+                  message: "Invalid email address"
+                }
               })}
             />
             {errors.email && (

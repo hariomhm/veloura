@@ -5,7 +5,8 @@ import { useSelector, useDispatch } from "react-redux";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Loading from "./components/Loading";
-import { login, setLoading } from "./store/authSlice";
+import ToastContainer from "./components/ToastContainer";
+import { checkAuth } from "./store/authSlice";
 import authService from "./lib/auth";
 
 /* -------- PAGES -------- */
@@ -20,6 +21,7 @@ const Womens = lazy(() => import("./pages/Womens"));
 const Kids = lazy(() => import("./pages/Kids"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
+const AddressForm = lazy(() => import("./components/AddressForm"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
@@ -28,6 +30,7 @@ const Help = lazy(() => import("./pages/Help"));
 const Terms = lazy(() => import("./pages/Terms"));
 const OrderTracking = lazy(() => import("./pages/OrderTracking"));
 const Returns = lazy(() => import("./pages/Returns"));
+const OrderHistory = lazy(() => import("./pages/OrderHistory"));
 
 /* -------- ADMIN PAGES -------- */
 
@@ -41,21 +44,21 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 /* -------- ROUTE GUARDS -------- */
 
 const ProtectedRoute = ({ children }) => {
-  const { status, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
 
   if (loading) return <Loading />;
-  if (!status) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return children;
 };
 
 const AdminRoute = ({ children }) => {
-  const { status, isAdmin, banned, loading } = useSelector(
+  const { isAuthenticated, isAdmin, banned, loading } = useSelector(
     (state) => state.auth
   );
 
   if (loading) return <Loading />;
-  if (!status) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (banned) return <Navigate to="/" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
 
@@ -65,7 +68,7 @@ const AdminRoute = ({ children }) => {
 const App = () => {
   const dispatch = useDispatch();
   const theme = useSelector((state) => state.theme.mode);
-  const { loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
 
   /* -------- THEME -------- */
   useEffect(() => {
@@ -75,21 +78,15 @@ const App = () => {
 
   /* -------- RESTORE SESSION -------- */
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const user = await authService.getCurrentUser();
-        if (user) {
-          dispatch(login({ userData: user }));
-        } else {
-          dispatch(setLoading(false));
-        }
-      } catch {
-        dispatch(setLoading(false));
-      }
-    };
-
-    loadUser();
+    dispatch(checkAuth());
   }, [dispatch]);
+
+  /* -------- START SESSION REFRESH -------- */
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      authService.startSessionRefresh();
+    }
+  }, [isAuthenticated, loading]);
 
   /* -------- GLOBAL AUTH LOADING GATE -------- */
   if (loading) return <Loading />;
@@ -107,7 +104,7 @@ const App = () => {
           <Route path="/mens" element={<Mens />} />
           <Route path="/womens" element={<Womens />} />
           <Route path="/kids" element={<Kids />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/help" element={<Help />} />
@@ -120,6 +117,14 @@ const App = () => {
           <Route path="/signup" element={<Signup />} />
 
           {/* USER */}
+          <Route
+            path="/address"
+            element={
+              <ProtectedRoute>
+                <AddressForm />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/checkout"
             element={
@@ -141,6 +146,14 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <UserProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/order-history"
+            element={
+              <ProtectedRoute>
+                <OrderHistory />
               </ProtectedRoute>
             }
           />
@@ -198,6 +211,8 @@ const App = () => {
       </Suspense>
 
       <Footer />
+
+      <ToastContainer />
     </>
   );
 };

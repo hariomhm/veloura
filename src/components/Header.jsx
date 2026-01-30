@@ -13,7 +13,7 @@ const Header = memo(() => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const isAuthenticated = useSelector((state) => state.auth.status);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const isAdmin = useSelector((state) => state.auth.isAdmin);
   const cartItemsCount = useSelector((state) =>
     state.cart.items.reduce((total, item) => total + item.quantity, 0)

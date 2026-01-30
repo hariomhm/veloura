@@ -2,56 +2,87 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  fetchProductById,
+  fetchProductBySlug,
   clearSelectedProduct,
 } from "../store/productSlice";
-import { addToCart } from "../store/cartSlice";
+import useCart from "../hooks/useCart";
 import config from "../config";
+import { getSellingPrice, getDiscountPercent } from "../lib/utils";
+import Skeleton from "../components/Skeleton";
 
 const ProductDetail = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const { selectedProduct, loading, error } = useSelector(
     (state) => state.products
   );
-  const { userData } = useSelector((state) => state.auth);
 
-  const [selectedSize, setSelectedSize] = useState(selectedProduct?.sizes?.[0] || "");
+  const { addToCart } = useCart();
+
+  const [selectedSize, setSelectedSize] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    if (id) dispatch(fetchProductById(id));
+    if (slug) dispatch(fetchProductBySlug(slug));
     return () => dispatch(clearSelectedProduct());
-  }, [dispatch, id]);
+  }, [dispatch, slug]);
 
   useEffect(() => {
     if (selectedProduct?.sizes?.length && !selectedSize) {
       setSelectedSize(selectedProduct.sizes[0]);
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, selectedSize]);
 
 const handleAddToCart = () => {
   if (!selectedSize) return;
 
-  dispatch(
-    addToCart({
-      product: selectedProduct,
-      size: selectedSize,
-    })
-  );
+  addToCart(selectedProduct, 1, selectedSize);
 };
 
 
   const handleBuyNow = () => {
     if (!selectedSize) return;
-    dispatch(addToCart({ product: selectedProduct, size: selectedSize }));
-    navigate('/checkout');
+    if (addToCart(selectedProduct, 1, selectedSize)) {
+      navigate('/checkout');
+    }
   };
 
   if (loading)
-    return <div className="text-center py-10">Loading product...</div>;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {/* Image Skeleton */}
+          <div>
+            <Skeleton className="w-full h-105 rounded-lg mb-4" />
+            <div className="flex gap-2">
+              <Skeleton className="w-20 h-20 rounded" />
+              <Skeleton className="w-20 h-20 rounded" />
+              <Skeleton className="w-20 h-20 rounded" />
+            </div>
+          </div>
+
+          {/* Details Skeleton */}
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-6 w-1/4" />
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-16 rounded" />
+              <Skeleton className="h-10 w-16 rounded" />
+              <Skeleton className="h-10 w-16 rounded" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+            <div className="flex gap-4">
+              <Skeleton className="h-12 w-32" />
+              <Skeleton className="h-12 w-32" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
 
   if (error)
     return (
@@ -68,12 +99,9 @@ const handleAddToCart = () => {
       ? selectedProduct.imageUrl
       : ["/placeholder.png"];
 
-  const discountedPrice = selectedProduct.sellingPrice || selectedProduct.mrp;
+  const discountedPrice = getSellingPrice(selectedProduct);
 
-  const discountPercent =
-    selectedProduct.discountPercent
-      ? selectedProduct.discountPercent
-      : 0;
+  const discountPercent = getDiscountPercent(selectedProduct);
 
   const outOfStock = selectedProduct.stock <= 0;
 
@@ -174,6 +202,7 @@ const handleAddToCart = () => {
               onClick={handleAddToCart}
               disabled={outOfStock}
               className="bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={`Add ${selectedProduct.name} to cart${selectedSize ? ` in size ${selectedSize}` : ''}`}
             >
               Add to Cart
             </button>
@@ -181,6 +210,7 @@ const handleAddToCart = () => {
               onClick={handleBuyNow}
               disabled={outOfStock}
               className="bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={`Buy ${selectedProduct.name} now${selectedSize ? ` in size ${selectedSize}` : ''}`}
             >
               Buy Now
             </button>

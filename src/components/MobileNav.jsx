@@ -8,7 +8,7 @@ import ThemeBtn from "./ThemeBtn";
 const MobileNav = () => {
   const navigate = useNavigate();
 
-  const isAuthenticated = useSelector((state) => state.auth.status);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const cartItemsCount = useSelector((state) =>
     state.cart.items.reduce((total, item) => total + item.quantity, 0)
   );

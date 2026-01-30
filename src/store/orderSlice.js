@@ -6,7 +6,12 @@ import config from "../config";
 
 export const fetchAllOrders = createAsyncThunk(
   "orders/fetchAllOrders",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
+    const state = getState();
+    if (state.orders.orders.length > 0) {
+      // Already loaded, return existing
+      return state.orders.orders;
+    }
     try {
       const res = await databases.listDocuments(
         config.appwriteDatabaseId,

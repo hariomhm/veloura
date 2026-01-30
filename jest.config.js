@@ -1,7 +1,8 @@
 export default {
   testEnvironment: 'jsdom',
+  preset: null,
   transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest',
+    '^.+\\.(js|jsx)$': ['babel-jest', { presets: ['@babel/preset-env', '@babel/preset-react'] }],
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
@@ -21,8 +22,11 @@ export default {
   testPathIgnorePatterns: ['/node_modules/', '/build/'],
   extensionsToTreatAsEsm: ['.jsx'],
   globals: {
-    'ts-jest': {
+    'babel-jest': {
       useESM: true,
     },
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(react|@testing-library)/)',
+  ],
 };

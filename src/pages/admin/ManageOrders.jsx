@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { databases } from "../../lib/appwrite";
+import { databases, Query } from "../../lib/appwrite";
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [status, setStatus] = useState("");
 
   useEffect(() => {
     fetchOrders();
@@ -14,9 +12,10 @@ const ManageOrders = () => {
     try {
       const response = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID
+        import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
+        [Query.orderDesc("$createdAt"), Query.limit(100)] // Limit to 100 orders
       );
-      setOrders(response.documents.reverse()); // Most recent first
+      setOrders(response.documents);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -30,7 +29,7 @@ const ManageOrders = () => {
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
         orderId,
-        { status: newStatus, updatedAt: new Date().toISOString() } // Add updatedAt field if needed
+        { status: newStatus }
       );
       fetchOrders(); // Refresh the list
     } catch (error) {
@@ -79,6 +78,21 @@ const ManageOrders = () => {
                   </select>
                 </div>
               </div>
+
+              {/* ADDRESS */}
+              {(order.customerName || order.addressLine) && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-2">Shipping Address</h3>
+                  <div className="text-sm space-y-1">
+                    {order.customerName && <p><strong>Name:</strong> {order.customerName}</p>}
+                    {order.customerPhone && <p><strong>Phone:</strong> {order.customerPhone}</p>}
+                    {order.addressLine && <p><strong>Address:</strong> {order.addressLine}</p>}
+                    {order.city && <p><strong>City:</strong> {order.city}</p>}
+                    {order.state && <p><strong>State:</strong> {order.state}</p>}
+                    {order.pincode && <p><strong>Pincode:</strong> {order.pincode}</p>}
+                  </div>
+                </div>
+              )}
 
               {/* PRODUCTS */}
               {order.items && (

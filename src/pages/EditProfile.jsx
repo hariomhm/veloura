@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { login } from "../store/authSlice";
 import authService from "../lib/auth";
+import service from "../lib/appwrite";
+import useToast from "../hooks/useToast";
 
 const EditProfile = () => {
   const {
@@ -14,34 +16,39 @@ const EditProfile = () => {
   } = useForm();
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { userData, status } = useSelector((state) => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { success, error } = useToast();
 
   useEffect(() => {
-    if (!status) {
+    if (!isAuthenticated) {
       navigate("/login");
       return;
     }
 
     // Pre-fill form with current user data
-    if (userData) {
-      setValue("name", userData.name || "");
-      setValue("email", userData.email || "");
-      setValue("phone", userData.prefs?.phone || "");
-      setValue("address", userData.prefs?.address || "");
+    if (user) {
+      setValue("name", user.name || "");
+      setValue("email", user.email || "");
+      setValue("phone", user.prefs?.phone || "");
+      setValue("address", user.prefs?.address || "");
     }
-  }, [userData, status, setValue, navigate]);
+  }, [user, isAuthenticated, setValue, navigate]);
 
   const onSubmit = async (data) => {
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     try {
+      // Update users collection
+      if (user.userDoc) {
+        await service.updateUser(user.userDoc.$id, {
+          phone: data.phone,
+          address: data.address,
+        });
+      }
+
       // Update profile preferences
       await authService.updateProfile({
         phone: data.phone,
@@ -50,17 +57,17 @@ const EditProfile = () => {
 
       // Refresh user data
       const updatedUser = await authService.getCurrentUser();
-      dispatch(login({ userData: updatedUser }));
+      dispatch(login({ user: updatedUser }));
 
-      setSuccess("Profile updated successfully!");
+      success("Profile updated successfully!");
     } catch (err) {
-      setError(err?.message || "Failed to update profile");
+      error(err?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!status) {
+  if (!isAuthenticated) {
     return <div>Please login to access this page.</div>;
   }
 
@@ -72,17 +79,6 @@ const EditProfile = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-6"
       >
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
-            {success}
-          </div>
-        )}
 
         {/* Name */}
         <div>

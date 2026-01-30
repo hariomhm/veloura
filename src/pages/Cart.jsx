@@ -1,57 +1,44 @@
-import { useCallback } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  removeFromCart,
-  updateQuantity,
-  clearCart
-} from "../store/cartSlice";
+import { useCallback, memo, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { FaShoppingCart } from "react-icons/fa";
 import config from "../config";
+import useCart from "../hooks/useCart";
 
-const Cart = () => {
-  const { items, totalPrice, loading, error } = useSelector((state) => state.cart);
-  const { userData } = useSelector((state) => state.auth);
-  const dispatch = useDispatch();
-
-  const getSellingPrice = (product) =>
-    product.sellingPrice ||
-    product.mrp ||
-    product.price;
+const Cart = memo(() => {
+  const {
+    items,
+    totalPrice,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+  } = useCart();
 
   const handleRemove = useCallback((productId, size) => {
-    if (userData?.$id) {
-      dispatch(removeFromCartAsync({ userId: userData.$id, productId, size }));
-    }
-  }, [userData?.$id, dispatch]);
+    removeFromCart(productId, size);
+  }, [removeFromCart]);
 
   const handleQuantityChange = useCallback((productId, size, value) => {
     const qty = Math.max(1, Number(value) || 1);
-    if (userData?.$id) {
-      dispatch(updateQuantityAsync({ userId: userData.$id, productId, size, quantity: qty }));
-    }
-  }, [userData?.$id, dispatch]);
+    updateQuantity(productId, size, qty);
+  }, [updateQuantity]);
+
+  const cartItems = useMemo(() => items.map((item) => {
+    const lineTotal = item.sellingPrice * item.quantity;
+    return { ...item, lineTotal };
+  }), [items]);
 
   if (items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
+        <FaShoppingCart className="mx-auto text-6xl text-gray-300 mb-4" />
         <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          Looks like you haven't added any items to your cart yet.
+        </p>
         <Link
           to="/products"
           className="inline-block bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 transition"
-        >
-          Continue Shopping
-        </Link>
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
-        <Link
-          to="/products"
-          className="inline-block bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 transition"
+          aria-label="Continue shopping"
         >
           Continue Shopping
         </Link>
@@ -66,69 +53,68 @@ const Cart = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => {
-            const price = getSellingPrice(item.product);
-            const lineTotal = price * item.quantity;
+          {cartItems.map((item) => (
+            <div
+              key={`${item.productId}-${item.size}`}
+              className="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
+            >
+              <img
+                src={item.image || "/placeholder.png"}
+                alt={item.name}
+                className="w-20 h-20 object-cover rounded"
+                loading="lazy"
+              />
 
-            return (
-              <div
-                key={`${item.product.$id}-${item.size}`}
-                className="flex gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
-              >
-                <img
-                  src={item.product.imageUrl?.[0] || "/placeholder.png"}
-                  alt={item.product.name}
-                  className="w-20 h-20 object-cover rounded"
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold">
+                  {item.name}{" "}
+                  <span className="text-sm text-gray-500">
+                    ({item.size})
+                  </span>
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {config.currencySymbol}
+                  {item.sellingPrice}
+                </p>
+                <p className="text-sm font-medium">
+                  Total: {config.currencySymbol}
+                  {item.lineTotal.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(e) =>
+                    handleQuantityChange(
+                      item.productId,
+                      item.size,
+                      e.target.value
+                    )
+                  }
+                  className="w-16 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:border-gray-600"
+                  aria-label={`Quantity for ${item.name}`}
                 />
 
-                <div className="flex-1">
-                  <h2 className="text-lg font-semibold">
-                    {item.product.name}{" "}
-                    <span className="text-sm text-gray-500">
-                      ({item.size})
-                    </span>
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {config.currencySymbol}
-                    {price}
-                  </p>
-                  <p className="text-sm font-medium">
-                    Total: {config.currencySymbol}
-                    {lineTotal}
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      handleQuantityChange(
-                        item.product.$id,
-                        item.size,
-                        e.target.value
-                      )
-                    }
-                    className="w-16 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:border-gray-600"
-                  />
-
-                  <button
-                    onClick={() =>
-                      handleRemove(item.product.$id, item.size)
-                    }
-                    className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
+                <button
+                  onClick={() =>
+                    handleRemove(item.productId, item.size)
+                  }
+                  className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  aria-label={`Remove ${item.name} from cart`}
+                >
+                  Remove
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
 
           <button
-            onClick={() => userData?.$id && dispatch(clearCartAsync(userData.$id))}
+            onClick={clearCart}
             className="text-sm bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+            aria-label="Clear all items from cart"
           >
             Clear Cart
           </button>
@@ -162,15 +148,18 @@ const Cart = () => {
           </div>
 
           <Link
-            to="/checkout"
+            to="/address"
             className="block text-center w-full bg-green-500 text-white py-3 rounded hover:bg-green-600 transition"
+            aria-label="Proceed to address"
           >
-            Proceed to Checkout
+            Proceed to Address
           </Link>
         </div>
       </div>
     </div>
   );
-};
+});
+
+Cart.displayName = "Cart";
 
 export default Cart;

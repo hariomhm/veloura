@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { logout } from '../store/authSlice';
-import { account } from '../lib/appwrite';
+import { logoutUser } from '../store/authSlice';
 import { FaChevronRight } from 'react-icons/fa';
 
 const UserProfile = () => {
-  const { userData: user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -18,8 +17,7 @@ const UserProfile = () => {
 
   const handleLogout = async () => {
     try {
-      await account.deleteSession('current');
-      dispatch(logout());
+      await dispatch(logoutUser()).unwrap();
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -51,7 +49,7 @@ const UserProfile = () => {
         </li>
 
         <li
-          onClick={() => navigate('/my-orders')}
+          onClick={() => navigate('/order-history')}
           className="flex justify-between items-center border-b pb-3 cursor-pointer hover:text-blue-500 transition"
         >
           <span className="font-medium">My Orders</span>

@@ -11,9 +11,6 @@ const config = {
   appwriteOrdersCollectionId:
     import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
 
-  appwriteBannersCollectionId:
-    import.meta.env.VITE_APPWRITE_BANNERS_COLLECTION_ID,
-
   appwriteUsersCollectionId:
     import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
 
@@ -23,6 +20,11 @@ const config = {
 
   appwriteNewsletterCollectionId:
     import.meta.env.VITE_APPWRITE_NEWSLETTER_COLLECTION_ID,
+  appwriteWishlistCollectionId:
+    import.meta.env.VITE_APPWRITE_WISHLIST_COLLECTION_ID,
+
+  appwriteCartsCollectionId:
+    import.meta.env.VITE_APPWRITE_CARTS_COLLECTION_ID,
 
   currencySymbol: "₹",
 

@@ -4,7 +4,12 @@ import { databases } from '../lib/appwrite';
 // Async thunk for fetching users
 export const fetchUsers = createAsyncThunk(
   'users/fetchUsers',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
+    const state = getState();
+    if (state.users.users.length > 0) {
+      // Already loaded, return existing
+      return state.users.users;
+    }
     try {
       const response = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,

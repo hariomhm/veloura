@@ -1,4 +1,6 @@
-const ProductFilters = ({
+import { memo } from "react";
+
+const ProductFilters = memo(({
   searchTerm,
   setSearchTerm,
   selectedCategory,
@@ -7,6 +9,10 @@ const ProductFilters = ({
   setSelectedGender,
   selectedBrand,
   setSelectedBrand,
+  selectedSize,
+  setSelectedSize,
+  selectedColor,
+  setSelectedColor,
   minPrice,
   setMinPrice,
   maxPrice,
@@ -16,6 +22,8 @@ const ProductFilters = ({
   categories = [],
   genders = [],
   brands = [],
+  sizes = [],
+  colors = [],
   showGenderFilter = true,
   onReset,
 }) => {
@@ -107,6 +115,44 @@ const ProductFilters = ({
         </select>
       </div>
 
+      {/* SIZE */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Size
+        </label>
+        <select
+          value={selectedSize}
+          onChange={(e) => setSelectedSize(e.target.value)}
+          className="w-full p-2 border rounded-md"
+        >
+          <option value="">All Sizes</option>
+          {sizes.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* COLOR */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Color
+        </label>
+        <select
+          value={selectedColor}
+          onChange={(e) => setSelectedColor(e.target.value)}
+          className="w-full p-2 border rounded-md"
+        >
+          <option value="">All Colors</option>
+          {colors.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* PRICE */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">
@@ -143,10 +189,14 @@ const ProductFilters = ({
           <option value="relevance">Relevance</option>
           <option value="price-low">Price: Low to High</option>
           <option value="price-high">Price: High to Low</option>
+          <option value="rating">Rating</option>
+          <option value="newest">Newest</option>
         </select>
       </div>
     </aside>
   );
-};
+});
+
+ProductFilters.displayName = "ProductFilters";
 
 export default ProductFilters;

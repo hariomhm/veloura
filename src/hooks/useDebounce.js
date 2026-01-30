@@ -1,30 +1,17 @@
 import { useState, useEffect } from 'react';
 
-const useDebounce = (value, delay, options = {}) => {
-  const { leading = false, trailing = true } = options;
+const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
-    let timeoutId;
-
-    if (leading) {
+    const handler = setTimeout(() => {
       setDebouncedValue(value);
-    }
-
-    if (trailing) {
-      timeoutId = setTimeout(() => {
-        if (!leading) {
-          setDebouncedValue(value);
-        }
-      }, delay);
-    }
+    }, delay);
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      clearTimeout(handler);
     };
-  }, [value, delay, leading, trailing]);
+  }, [value, delay]);
 
   return debouncedValue;
 };

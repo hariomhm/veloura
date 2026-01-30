@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchProductById, updateProduct } from "../../store/productSlice";
+import useToast from "../../hooks/useToast";
+import AdminGuard from "../../components/AdminGuard";
 
 const EditProduct = () => {
   const { productId } = useParams();
@@ -12,7 +14,7 @@ const EditProduct = () => {
   const { selectedProduct, loading, error } = useSelector(
     (state) => state.products
   );
-  const isAdmin = useSelector((state) => state.auth.isAdmin);
+  const { success, error: showError } = useToast();
 
   const {
     register,
@@ -57,17 +59,21 @@ const EditProduct = () => {
     setValue("isFeatured", selectedProduct.isFeatured || false);
   }, [selectedProduct, setValue]);
 
-  /* ---------- ADMIN GUARD ---------- */
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-red-500">
-          Access Denied
-        </h1>
-        <p>You do not have permission to access this page.</p>
-      </div>
-    );
-  }
+  /* ---------- SIDE EFFECTS ---------- */
+  useEffect(() => {
+    if (!hasSubmitted.current) return;
+
+    if (!loading && !error) {
+      success("Product updated successfully!");
+      navigate("/admin/manage-products");
+      hasSubmitted.current = false;
+    }
+
+    if (error) {
+      showError(`Failed to update product: ${error}`);
+      hasSubmitted.current = false;
+    }
+  }, [loading, error, navigate, success, showError]);
 
   /* ---------- HANDLERS ---------- */
   const handleImageChange = (e) => {
@@ -88,22 +94,6 @@ const EditProduct = () => {
     dispatch(updateProduct({ productId, productData }));
   };
 
-  /* ---------- SIDE EFFECTS ---------- */
-  useEffect(() => {
-    if (!hasSubmitted.current) return;
-
-    if (!loading && !error) {
-      alert("Product updated successfully!");
-      navigate("/admin/manage-products");
-      hasSubmitted.current = false;
-    }
-
-    if (error) {
-      alert(`Failed to update product: ${error}`);
-      hasSubmitted.current = false;
-    }
-  }, [loading, error, navigate]);
-
   /* ---------- STATES ---------- */
   if (loading && !selectedProduct) {
     return <div className="text-center py-12">Loading product…</div>;
@@ -123,13 +113,14 @@ const EditProduct = () => {
 
   /* ---------- UI ---------- */
   return (
-    <div className="container mx-auto px-4 py-10">
-      <h1 className="text-3xl font-bold mb-8">Edit Product</h1>
+    <AdminGuard>
+      <div className="container mx-auto px-4 py-10">
+        <h1 className="text-3xl font-bold mb-8">Edit Product</h1>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
-      >
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
+        >
         {/* NAME */}
         <div>
           <label className="block mb-1 font-medium">Product Name</label>
@@ -157,13 +148,12 @@ const EditProduct = () => {
 
           <div>
             <label className="block mb-1 font-medium">
-              Discount Percent
+              Discount Percent (%)
             </label>
             <input
               type="number"
               min="0"
-              max="100"
-              step="1"
+              step="0.01"
               {...register("discountPercent")}
               className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
             />
@@ -187,10 +177,10 @@ const EditProduct = () => {
             className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
           >
             <option value="">Select Gender</option>
-            <option value="Men">Men</option>
-            <option value="Women">Women</option>
-            <option value="Unisex">Unisex</option>
-            <option value="Kids">Kids</option>
+            <option value="men">Men</option>
+            <option value="women">Women</option>
+            <option value="unisex">Unisex</option>
+            <option value="kids">Kids</option>
           </select>
         </div>
 
@@ -344,6 +334,7 @@ const EditProduct = () => {
         </button>
       </form>
     </div>
+    </AdminGuard>
   );
 };
 

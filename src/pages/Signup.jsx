@@ -2,9 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { login } from "../store/authSlice";
+import { loginUser } from "../store/authSlice";
+import { setUser } from "../store/cartSlice";
 import authService from "../lib/auth";
 import { account, ID } from "../lib/appwrite";
+import service from "../lib/appwrite";
+import { sanitizeInput, isValidEmail, isValidPhone } from "../lib/utils";
 
 const Signup = () => {
   const {
@@ -50,7 +53,7 @@ const Signup = () => {
 
   /* ================= SUBMIT ================= */
   const onSubmit = async (data) => {
-    if (data.password !== data.confirmPassword) {
+    if (data.password.trim() !== data.confirmPassword.trim()) {
       setError("Passwords do not match");
       return;
     }
@@ -59,30 +62,57 @@ const Signup = () => {
     setError("");
 
     try {
+      // Sanitize inputs
+      const sanitizedData = {
+        name: sanitizeInput(data.name),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone.trim(),
+        password: data.password.trim(),
+      };
+
+      // Additional validation
+      if (!isValidEmail(sanitizedData.email)) {
+        setError("Invalid email format");
+        return;
+      }
+
+      if (!isValidPhone(sanitizedData.phone)) {
+        setError("Invalid phone number");
+        return;
+      }
+
       // 1️⃣ Create account
-      await account.create(
+      const accountData = await account.create(
         ID.unique(),
-        data.email,
-        data.password,
-        data.name
+        sanitizedData.email,
+        sanitizedData.password,
+        sanitizedData.name
       );
 
-      // 2️⃣ Create session
-      await account.createEmailPasswordSession(
-        data.email,
-        data.password
-      );
+      // 2️⃣ Create user document
+      await service.createUser({
+        userId: accountData.$id,
+        name: sanitizedData.name,
+        email: sanitizedData.email,
+        phone: sanitizedData.phone,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+      });
 
       // 3️⃣ Set default role (VERY IMPORTANT)
       await account.updatePrefs({
         role: "user", // 🔥 change to "admin" for admin accounts
       });
 
-      // 4️⃣ Fetch user
-      const user = await account.get();
+      // 4️⃣ Login user (creates session and sets state)
+      await dispatch(loginUser({
+        email: sanitizedData.email,
+        password: sanitizedData.password
+      })).unwrap();
 
-      // 5️⃣ Redux login
-      dispatch(login({ userData: user }));
+      // 5️⃣ Set cart user
+      const user = await authService.getCurrentUser();
+      dispatch(setUser(user.$id));
 
       navigate("/");
     } catch (err) {
@@ -115,7 +145,7 @@ const Signup = () => {
           <input
             placeholder="Full Name"
             {...register("name", { required: "Name is required" })}
-            className="w-full px-3 py-2 border rounded dark:bg-gray-700"
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
           {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
 
@@ -123,10 +153,31 @@ const Signup = () => {
           <input
             type="email"
             placeholder="Email"
-            {...register("email", { required: "Email is required" })}
-            className="w-full px-3 py-2 border rounded dark:bg-gray-700"
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^\S+@\S+$/i,
+                message: "Invalid email address"
+              }
+            })}
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
           {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
+
+          {/* PHONE */}
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            {...register("phone", {
+              required: "Phone is required",
+              pattern: {
+                value: /^[6-9]\d{9}$/,
+                message: "Invalid phone number (10 digits starting with 6-9)"
+              }
+            })}
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          {errors.phone && <p className="text-red-500 text-xs">{errors.phone.message}</p>}
 
           {/* PASSWORD */}
           <div className="relative">
@@ -137,7 +188,7 @@ const Signup = () => {
                 required: "Password required",
                 minLength: { value: 8, message: "Min 8 characters" },
               })}
-              className="w-full px-3 py-2 border rounded dark:bg-gray-700"
+              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
             <button
               type="button"
@@ -168,7 +219,7 @@ const Signup = () => {
               {...register("confirmPassword", {
                 required: "Confirm password",
               })}
-              className="w-full px-3 py-2 border rounded dark:bg-gray-700"
+              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
             <button
               type="button"

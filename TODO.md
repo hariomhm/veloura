@@ -1,3 +1,7 @@
-- [x] Fix import in ProductDetail.jsx: change 'addToCartAsync' to 'addToCart'
-- [x] Add 'useNavigate' to the imports from 'react-router-dom'
-- [x] Add 'const navigate = useNavigate();' inside the ProductDetail component
+- [x] Fix UserProfile.jsx: Change userData to user in selector
+- [x] Fix useAdmin.js: Change status to isAuthenticated in selector
+- [x] Remove unused userData from ProductDetail.jsx
+- [x] Add /order-history route in App.jsx
+- [x] Change UserProfile navigate to '/order-history'
+- [x] Test profile page access
+- [x] Test admin panel access

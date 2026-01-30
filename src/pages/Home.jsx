@@ -1,176 +1,56 @@
-import React, { useEffect, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  FaShieldAlt,
-  FaTruck,
-  FaAward,
-  FaShoppingCart,
-} from "react-icons/fa";
-
-import { fetchProducts } from "../store/productSlice";
-import { addToCart } from "../store/cartSlice";
-import config from "../config";
+import React from "react";
+import { Link } from "react-router-dom";
+import banner from "../assets/bannerImage.png";
+import mens from "../assets/mensbannerimage.png";
+import womens from "../assets/womensbannerimage.png";
+import kids from "../assets/kidsbannerimage.png";
 
 const Home = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { products, loading } = useSelector((state) => state.products);
-  const { userData } = useSelector((state) => state.auth);
-
-  useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
-
-  const featuredProducts = useMemo(
-    () => products.slice(0, 4),
-    [products]
-  );
-
-  const handleAddToCart = (product) => {
-    if (!userData?.$id) {
-      alert("Please login to add items to cart.");
-      return;
-    }
-    if (product.sizes?.length > 0) {
-      // Redirect to product detail if product has sizes
-      navigate(`/product/${product.$id}`);
-    } else {
-      dispatch(addToCartAsync({ userId: userData.$id, product }));
-    }
-  };
-
-  const getImageUrl = (product) => {
-    return product.image || "/placeholder.png";
-  };
+  const banners = [
+    { name: "Shop All", path: "/products", image: banner },
+    { name: "Mens Collection", path: "/mens", image: mens },
+    { name: "Womens Collection", path: "/womens", image: womens },
+    { name: "Kids Collection", path: "/kids", image: kids },
+  ];
 
   return (
-    <>
-      {/* ================= HERO BANNERS ================= */}
-      <section className="w-full">
-        <Link to="/products">
-          <img
-            src="/bannerImage.png"
-            alt="Shop All"
-            className="w-full h-[90vh] object-cover"
-          />
-        </Link>
-      </section>
+<div className="min-h-screen">
+  <div className="grid grid-cols-1">
+{banners.map((banner, index) => (
+  <Link
+    key={banner.name}
+    to={banner.path}
+    className="block w-full h-screen overflow-hidden group"
+    style={{
+      animationDelay: `${index * 150}ms`,
+    }}
+  >
+    <div
+      className="relative w-full h-full bg-center bg-cover
+                 scale-105
+                 animate-fadeUp
+                 transition-transform duration-700 ease-out
+                 group-hover:scale-110"
+      style={{ backgroundImage: `url("${banner.image}")` }}
+    >
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition" />
 
-      <section className="grid grid-cols-1 md:grid-cols-3">
-        <Link to="/mens">
-          <img
-            src="/mensbannerimage.png"
-            alt="Mens"
-            className="w-full h-[70vh] object-cover"
-            loading="lazy"
-          />
-        </Link>
-        <Link to="/womens">
-          <img
-            src="/womensbannerimage.png"
-            alt="Womens"
-            className="w-full h-[70vh] object-cover"
-            loading="lazy"
-          />
-        </Link>
-        <Link to="/kids">
-          <img
-            src="/kidsbannerimage.png"
-            alt="Kids"
-            className="w-full h-[70vh] object-cover"
-            loading="lazy"
-          />
-        </Link>
-      </section>
+      <h2
+        className="absolute inset-0 flex items-center justify-center
+                   text-white text-3xl font-bold
+                   opacity-0 translate-y-6
+                   transition-all duration-500
+                   group-hover:opacity-100 group-hover:translate-y-0"
+      >
+        {banner.name}
+      </h2>
+    </div>
+  </Link>
+))}
 
-      {/* ================= WHY CHOOSE US ================= */}
-      <div className="mx-auto max-w-7xl px-4">
-        <section className="py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Why Choose Veloura?
-          </h2>
+  </div>
+</div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <FaShieldAlt className="mx-auto text-4xl text-black dark:text-white mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Secure Payments
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                100% secure checkout powered by Razorpay.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <FaTruck className="mx-auto text-4xl text-black dark:text-white mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Fast Delivery
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Reliable & quick shipping across India.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <FaAward className="mx-auto text-4xl text-black dark:text-white mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Premium Quality
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Carefully curated fashion you can trust.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ================= FEATURED PRODUCTS ================= */}
-        <section className="py-16">
-          <h2 className="text-3xl font-bold text-center mb-10">
-            Featured Products
-          </h2>
-
-          {loading ? (
-            <p className="text-center">Loading products...</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((product) => (
-                <div
-                  key={product.$id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition"
-                >
-                  <Link to={`/product/${product.$id}`}>
-                    <img
-                      src={getImageUrl(product)}
-                      alt={product.productName}
-                      className="w-full h-64 object-cover rounded-t-lg"
-                    />
-                  </Link>
-
-                  <div className="p-4">
-                    <h3 className="font-semibold mb-2">
-                      {product.productName}
-                    </h3>
-                    <p className="text-lg font-bold mb-4">
-                      {config.currencySymbol}
-                      {product.sellingPrice || product.price}
-                    </p>
-
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className="w-full flex items-center justify-center gap-2 bg-black text-white py-2 rounded hover:bg-gray-800 transition"
-                    >
-                      <FaShoppingCart />
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </>
   );
 };
 

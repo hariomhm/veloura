@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import useToast from "../hooks/useToast";
 
 const Returns = () => {
+  const { error: showError } = useToast();
+
   const [formData, setFormData] = useState({
     orderId: "",
     reason: "",
@@ -29,7 +32,7 @@ const Returns = () => {
     } catch (error) {
       console.error("Return request failed:", error);
       setSubmitStatus(null);
-      alert("Failed to submit return request. Please try again.");
+      showError("Failed to submit return request. Please try again.");
     }
   };
 

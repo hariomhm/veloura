@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProducts } from "../store/productSlice";
 import { useSearchParams } from "react-router-dom";
@@ -9,8 +9,10 @@ import TopFilterBar from "../components/TopFilterBar";
 import FilterDrawer from "../components/FilterDrawer";
 import Loading from "../components/Loading";
 import Error from "../components/Error";
+import { FaSearch } from "react-icons/fa";
 
 import useFilteredProducts from "../hooks/useFilteredProducts";
+import useDebounce from "../hooks/useDebounce";
 
 const CategoryPage = ({ gender, title }) => {
   const dispatch = useDispatch();
@@ -25,6 +27,8 @@ const CategoryPage = ({ gender, title }) => {
     searchParams.get("category") || ""
   );
   const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState("name");
@@ -51,13 +55,30 @@ const CategoryPage = ({ gender, title }) => {
     [products]
   );
 
+  const sizes = useMemo(
+    () => [...new Set(products.flatMap(p => p.sizes || []).filter(Boolean))],
+    [products]
+  );
+
+  const colors = useMemo(
+    () => [...new Set(products.map(p => p.color).filter(Boolean))],
+    [products]
+  );
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  const handleOpenFilters = useCallback(() => setShowFilters(true), []);
+  const handleCloseFilters = useCallback(() => setShowFilters(false), []);
+
   /* FILTERED PRODUCTS (gender locked) */
   const filteredProducts = useFilteredProducts({
     products,
     gender,
-    searchTerm,
+    searchTerm: debouncedSearchTerm,
     selectedCategory,
     selectedBrand,
+    selectedSize,
+    selectedColor,
     minPrice,
     maxPrice,
     sortBy,
@@ -75,26 +96,12 @@ const CategoryPage = ({ gender, title }) => {
         <span className="text-gray-900 font-medium">{title}</span>
       </div>
 
-      {/* BANNER */}
-      {!Array.isArray(gender) && (
-        <section className="relative h-[50vh] mb-8">
-          <img
-            src={`/${gender.toLowerCase()}${gender.toLowerCase() === 'kids' ? '' : 's'}bannerimage.png`}
-            alt={title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-            <h1 className="text-4xl font-bold text-white">{title}</h1>
-          </div>
-        </section>
-      )}
-
       {/* TOP FILTER BAR (same as Products) */}
       <TopFilterBar
         total={filteredProducts.length}
         sortBy={sortBy}
         setSortBy={setSortBy}
-        onOpenFilters={() => setShowFilters(true)}
+        onOpenFilters={handleOpenFilters}
         priceRange={priceRange}
         setPriceRange={setPriceRange}
       />
@@ -103,15 +110,17 @@ const CategoryPage = ({ gender, title }) => {
       {filteredProducts.length ? (
         <ProductGrid products={filteredProducts} />
       ) : (
-        <div className="text-center py-20 text-gray-500">
-          No products found
+        <div className="text-center py-20">
+          <FaSearch className="mx-auto text-6xl text-gray-400 mb-4" />
+          <h2 className="text-2xl font-semibold text-gray-600 mb-2">No Products Found</h2>
+          <p className="text-gray-500">Try adjusting your filters or search terms.</p>
         </div>
       )}
 
       {/* FILTER DRAWER (mobile – SAME as Products) */}
       <FilterDrawer
         isOpen={showFilters}
-        onClose={() => setShowFilters(false)}
+        onClose={handleCloseFilters}
       >
         <ProductFilters
           searchTerm={searchTerm}
@@ -120,6 +129,10 @@ const CategoryPage = ({ gender, title }) => {
           setSelectedCategory={setSelectedCategory}
           selectedBrand={selectedBrand}
           setSelectedBrand={setSelectedBrand}
+          selectedSize={selectedSize}
+          setSelectedSize={setSelectedSize}
+          selectedColor={selectedColor}
+          setSelectedColor={setSelectedColor}
           minPrice={minPrice}
           setMinPrice={setMinPrice}
           maxPrice={maxPrice}
@@ -128,6 +141,8 @@ const CategoryPage = ({ gender, title }) => {
           setSortBy={setSortBy}
           categories={categories}
           brands={brands}
+          sizes={sizes}
+          colors={colors}
           showGenderFilter={false} // gender is locked
         />
       </FilterDrawer>

@@ -1,13 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { databases, storage, ID } from "../lib/appwrite";
-
-/* ---------- HELPERS ---------- */
-
-const getSellingPrice = (price, discountPercent) => {
-  return discountPercent
-    ? Number(price) - (Number(price) * Number(discountPercent) / 100)
-    : Number(price);
-};
+import service from "../lib/appwrite";
+import { getSellingPrice } from "../lib/utils";
 
 const normalizeSizes = (sizes) => {
   if (Array.isArray(sizes)) return sizes;
@@ -19,7 +13,7 @@ const normalizeSizes = (sizes) => {
 
 const normalizeProduct = (p) => {
   const imageUrl = (p.imageUrl || []).map((id) =>
-    storage.getFileView(
+    storage.getFilePreview(
       import.meta.env.VITE_APPWRITE_BUCKET_ID,
       id
     )
@@ -35,7 +29,12 @@ const normalizeProduct = (p) => {
 
 export const fetchProducts = createAsyncThunk(
   "products/fetchProducts",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
+    const state = getState();
+    if (state.products.productsLoaded) {
+      // Already loaded, return existing products to avoid refetch
+      return state.products.products;
+    }
     try {
       const res = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
@@ -59,6 +58,19 @@ export const fetchProductById = createAsyncThunk(
         import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
         productId
       );
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+/* ---------- FETCH PRODUCT BY SLUG ---------- */
+
+export const fetchProductBySlug = createAsyncThunk(
+  "products/fetchProductBySlug",
+  async (slug, { rejectWithValue }) => {
+    try {
+      return await service.getProductBySlug(slug);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -92,7 +104,20 @@ export const addProduct = createAsyncThunk(
         productType,
       } = productData;
 
-      const sellingPrice = getSellingPrice(mrp, discountPercent);
+      // Validation
+      if (!name || !mrp || !category || !gender || !sizes || !description || !productType || stock === undefined) {
+        throw new Error('Missing required fields');
+      }
+      if (!['men', 'women', 'kids', 'unisex'].includes(gender.toLowerCase())) {
+        throw new Error('Invalid gender');
+      }
+      if (Number(mrp) <= 0) {
+        throw new Error('MRP must be greater than 0');
+      }
+      if (Number(stock) < 0) {
+        throw new Error('Stock cannot be negative');
+      }
+
       const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
       const imageIds = [];
@@ -113,9 +138,8 @@ export const addProduct = createAsyncThunk(
           name,
           mrp: Number(mrp),
           discountPercent: discountPercent ? Number(discountPercent) : null,
-          sellingPrice,
           category,
-          gender,
+          gender: gender.toLowerCase(),
           sizes: normalizeSizes(sizes),
           imageUrl: imageIds,
           description,
@@ -129,6 +153,7 @@ export const addProduct = createAsyncThunk(
           washCare,
           countryOfOrigin,
           isFeatured: isFeatured || false,
+          isActive: true,
           rating: 0,
           reviewCount: 0,
           productType,
@@ -167,16 +192,26 @@ export const updateProduct = createAsyncThunk(
         productType,
       } = productData;
 
+      // Validation
+      if (gender && !['men', 'women', 'kids', 'unisex'].includes(gender.toLowerCase())) {
+        throw new Error('Invalid gender');
+      }
+      if (mrp && Number(mrp) <= 0) {
+        throw new Error('MRP must be greater than 0');
+      }
+      if (stock !== undefined && Number(stock) < 0) {
+        throw new Error('Stock cannot be negative');
+      }
+
       const updateData = {
         name,
-        mrp: Number(mrp),
-        discountPercent: discountPercent ? Number(discountPercent) : null,
-        sellingPrice: getSellingPrice(mrp, discountPercent),
+        mrp: mrp ? Number(mrp) : undefined,
+        discountPercent: discountPercent !== undefined ? (discountPercent ? Number(discountPercent) : null) : undefined,
         category,
-        gender,
-        sizes: normalizeSizes(sizes),
+        gender: gender ? gender.toLowerCase() : undefined,
+        sizes: sizes ? normalizeSizes(sizes) : undefined,
         description,
-        stock: Number(stock),
+        stock: stock !== undefined ? Number(stock) : undefined,
         color,
         material,
         pattern,
@@ -187,6 +222,9 @@ export const updateProduct = createAsyncThunk(
         isFeatured,
         productType,
       };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
       if (name) {
         updateData.slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -248,6 +286,7 @@ const productSlice = createSlice({
     selectedProduct: null,
     loading: false,
     error: null,
+    productsLoaded: false, // Cache flag
   },
   reducers: {
     clearSelectedProduct: (state) => {
@@ -263,6 +302,7 @@ const productSlice = createSlice({
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
         state.products = action.payload.map(normalizeProduct);
+        state.productsLoaded = true;
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
@@ -278,6 +318,19 @@ const productSlice = createSlice({
         state.selectedProduct = normalizeProduct(action.payload);
       })
       .addCase(fetchProductById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      /* FETCH BY SLUG */
+      .addCase(fetchProductBySlug.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchProductBySlug.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedProduct = action.payload ? normalizeProduct(action.payload) : null;
+      })
+      .addCase(fetchProductBySlug.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
