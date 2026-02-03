@@ -5,6 +5,7 @@ export default function Products() {
     <CategoryPage
       gender={["men", "women", "kids"]}
       title="Shop All"
+      seoPath="/products"
     />
   );
 }

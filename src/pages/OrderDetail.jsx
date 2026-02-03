@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, memo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import service from '../lib/appwrite';
+import orderService from '../lib/orderService';
 import OrderTimeline from '../components/OrderTimeline';
 import jsPDF from 'jspdf';
 
@@ -12,10 +12,17 @@ const OrderDetail = memo(() => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const userId = user?.$id;
+
   const fetchOrder = useCallback(async () => {
     try {
-      const order = await service.getOrder(orderId);
-      if (order && order.userId === user.userDoc.$id) {
+      if (!userId) return;
+      const order = await orderService.getOrder(orderId);
+      if (
+        order &&
+        (order.userId === userId ||
+          user?.role === "admin")
+      ) {
         setOrder(order);
       } else {
         setError('Order not found or access denied');
@@ -25,15 +32,15 @@ const OrderDetail = memo(() => {
     } finally {
       setLoading(false);
     }
-  }, [user.userDoc.$id, orderId]);
+  }, [userId, orderId, user?.role]);
 
   useEffect(() => {
-    if (isAuthenticated && orderId) {
+    if (isAuthenticated && orderId && userId) {
       fetchOrder();
     } else {
       setLoading(false);
     }
-  }, [isAuthenticated, orderId, fetchOrder]);
+  }, [isAuthenticated, orderId, userId, fetchOrder]);
 
   const downloadInvoice = () => {
     const doc = new jsPDF();
@@ -45,7 +52,7 @@ const OrderDetail = memo(() => {
     doc.text(`Status: ${order.status}`, 20, 60);
     doc.text(`Total: ₹${order.totalAmount}`, 20, 70);
 
-    const items = JSON.parse(order.items || '[]');
+    const items = Array.isArray(order.items) ? order.items : [];
     let y = 90;
     doc.text('Items:', 20, y);
     y += 10;
@@ -69,7 +76,7 @@ const OrderDetail = memo(() => {
     return <div className="p-6 text-red-600">{error || 'Order not found'}</div>;
   }
 
-  const items = JSON.parse(order.items || '[]');
+  const items = Array.isArray(order.items) ? order.items : [];
 
   return (
     <div className="p-6">

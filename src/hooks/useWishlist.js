@@ -8,7 +8,7 @@ const useWishlist = () => {
   const { items: wishlist, loading, loaded } = useSelector((state) => state.wishlist);
 
   useEffect(() => {
-    if (isAuthenticated && user?.userDoc && !loaded) {
+    if (isAuthenticated && user?.$id && !loaded) {
       dispatch(fetchWishlist());
     } else if (!isAuthenticated) {
       dispatch(clearWishlist());
@@ -16,7 +16,7 @@ const useWishlist = () => {
   }, [isAuthenticated, user, loaded, dispatch]);
 
   const handleToggleWishlist = (productId) => {
-    if (!isAuthenticated || !user?.userDoc) return;
+    if (!isAuthenticated || !user?.$id) return;
     dispatch(toggleWishlistAction(productId));
   };
 

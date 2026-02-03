@@ -1,13 +1,13 @@
 import React, { useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import { bootstrapSession } from "./store/authSlice";
+import { setUser as setCartUser, syncCart, saveCartToServer } from "./store/cartSlice";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Loading from "./components/Loading";
 import ToastContainer from "./components/ToastContainer";
-import { checkAuth } from "./store/authSlice";
-import authService from "./lib/auth";
 
 /* -------- PAGES -------- */
 
@@ -68,7 +68,9 @@ const AdminRoute = ({ children }) => {
 const App = () => {
   const dispatch = useDispatch();
   const theme = useSelector((state) => state.theme.mode);
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const { loading, bootstrapped, user } = useSelector((state) => state.auth);
+  const cartItems = useSelector((state) => state.cart.items);
+  const cartUserId = useSelector((state) => state.cart.userId);
 
   /* -------- THEME -------- */
   useEffect(() => {
@@ -76,20 +78,37 @@ const App = () => {
     document.documentElement.classList.add(theme);
   }, [theme]);
 
-  /* -------- RESTORE SESSION -------- */
+  /* -------- SESSION BOOTSTRAP -------- */
   useEffect(() => {
-    dispatch(checkAuth());
-  }, [dispatch]);
-
-  /* -------- START SESSION REFRESH -------- */
-  useEffect(() => {
-    if (isAuthenticated && !loading) {
-      authService.startSessionRefresh();
+    if (!bootstrapped) {
+      dispatch(bootstrapSession());
     }
-  }, [isAuthenticated, loading]);
+  }, [dispatch, bootstrapped]);
+
+  /* -------- CART SYNC -------- */
+  useEffect(() => {
+    const userId = user?.$id || null;
+    dispatch(setCartUser(userId));
+    if (userId) {
+      dispatch(syncCart(userId));
+    }
+  }, [dispatch, user?.$id]);
+
+  useEffect(() => {
+    if (!cartUserId) return;
+    const payload = cartItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      size: item.size || null,
+    }));
+    const timer = setTimeout(() => {
+      dispatch(saveCartToServer({ userId: cartUserId, items: payload }));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [dispatch, cartItems, cartUserId]);
 
   /* -------- GLOBAL AUTH LOADING GATE -------- */
-  if (loading) return <Loading />;
+  if (loading && !bootstrapped) return <Loading />;
 
   return (
     <>

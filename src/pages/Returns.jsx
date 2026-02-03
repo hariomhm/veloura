@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import useToast from "../hooks/useToast";
+import returnService from "../lib/returnService";
 
 const Returns = () => {
-  const { error: showError } = useToast();
+  const { error: showError, success: showSuccess } = useToast();
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     orderId: "",
@@ -24,19 +28,22 @@ const Returns = () => {
     setSubmitStatus("loading");
 
     try {
-      // 🔥 Replace this block with Appwrite / backend API later
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await returnService.createReturnRequest({
+        orderId: formData.orderId.trim(),
+        reason: formData.reason,
+        description: formData.description,
+      });
 
       setSubmitStatus("success");
       setFormData({ orderId: "", reason: "", description: "" });
+      showSuccess("Return request submitted");
     } catch (error) {
       console.error("Return request failed:", error);
       setSubmitStatus(null);
-      showError("Failed to submit return request. Please try again.");
+      showError(error?.message || "Failed to submit return request. Please try again.");
     }
   };
 
-  // auto-hide success message
   useEffect(() => {
     if (submitStatus === "success") {
       const timer = setTimeout(() => setSubmitStatus(null), 5000);
@@ -73,13 +80,13 @@ const Returns = () => {
             <ol>
               <li>Submit the return request below</li>
               <li>Our team will verify your request</li>
-              <li>You’ll receive pickup or shipping instructions</li>
+              <li>You will receive pickup or shipping instructions</li>
               <li>Refund processed after inspection</li>
             </ol>
 
             <h3>Refunds</h3>
             <p>
-              Refunds are processed within <strong>5–7 business days</strong>{" "}
+              Refunds are processed within <strong>5-7 business days</strong>{" "}
               after the returned item is received and approved.
             </p>
           </div>
@@ -89,70 +96,78 @@ const Returns = () => {
         <section>
           <h2 className="text-2xl font-bold mb-4">Request a Return</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block mb-1 font-medium">Order ID</label>
-              <input
-                type="text"
-                name="orderId"
-                value={formData.orderId}
-                onChange={handleChange}
-                required
-                placeholder="e.g. ORD123456"
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-              />
+          {!isAuthenticated ? (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded">
+              Please <Link className="underline" to="/login">log in</Link> to submit a return request.
             </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-medium">Order ID</label>
+                  <input
+                    type="text"
+                    name="orderId"
+                    value={formData.orderId}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g. ORD123456"
+                    className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
 
-            <div>
-              <label className="block mb-1 font-medium">
-                Reason for Return
-              </label>
-              <select
-                name="reason"
-                value={formData.reason}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-              >
-                <option value="">Select a reason</option>
-                <option value="wrong-item">Wrong item received</option>
-                <option value="defective">Defective product</option>
-                <option value="not-satisfied">
-                  Not satisfied with product
-                </option>
-                <option value="other">Other</option>
-              </select>
-            </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Reason for Return
+                  </label>
+                  <select
+                    name="reason"
+                    value={formData.reason}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="">Select a reason</option>
+                    <option value="wrong-item">Wrong item received</option>
+                    <option value="defective">Defective product</option>
+                    <option value="not-satisfied">
+                      Not satisfied with product
+                    </option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
 
-            <div>
-              <label className="block mb-1 font-medium">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                rows="4"
-                placeholder="Describe the issue in detail..."
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-              />
-            </div>
+                <div>
+                  <label className="block mb-1 font-medium">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    required
+                    rows="4"
+                    placeholder="Describe the issue in detail..."
+                    className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
 
-            <button
-              type="submit"
-              disabled={submitStatus === "loading"}
-              className="w-full bg-blue-500 text-white py-3 px-4 rounded hover:bg-blue-600 transition disabled:opacity-50"
-            >
-              {submitStatus === "loading"
-                ? "Submitting..."
-                : "Submit Return Request"}
-            </button>
-          </form>
+                <button
+                  type="submit"
+                  disabled={submitStatus === "loading"}
+                  className="w-full bg-blue-500 text-white py-3 px-4 rounded hover:bg-blue-600 transition disabled:opacity-50"
+                >
+                  {submitStatus === "loading"
+                    ? "Submitting..."
+                    : "Submit Return Request"}
+                </button>
+              </form>
 
-          {submitStatus === "success" && (
-            <div className="mt-4 p-4 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 rounded">
-              ✅ Your return request has been submitted. Our team will contact
-              you within 24 hours.
-            </div>
+              {submitStatus === "success" && (
+                <div className="mt-4 p-4 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 rounded">
+                  Your return request has been submitted. Our team will contact
+                  you within 24 hours.
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

@@ -1,59 +1,110 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { setUser } from "./cartSlice";
-import { account } from "../lib/appwrite";
-import service from "../lib/appwrite";
-import authService from "../lib/auth";
+import authService from "../lib/authService";
+import userService from "../lib/userService";
 
 const initialState = {
   isAuthenticated: false,
   user: null,
   isAdmin: false,
   banned: false,
-  loading: true,
+  loading: false,
+  error: null,
+  bootstrapped: false,
 };
 
-// Async thunk to check auth on app load
-export const checkAuth = createAsyncThunk(
-  "auth/checkAuth",
-  async (_, { dispatch, rejectWithValue }) => {
+const applyUserState = (state, user) => {
+  state.isAuthenticated = Boolean(user);
+  state.user = user;
+  state.isAdmin = user?.role === "admin" || user?.userDoc?.role === "admin";
+  state.banned = user?.isBanned === true || user?.userDoc?.isBanned === true;
+};
+
+export const bootstrapSession = createAsyncThunk(
+  "auth/bootstrapSession",
+  async (_, { rejectWithValue }) => {
     try {
-      const authUser = await account.get();
-      const userDoc = await service.getUserByUserId(authUser.$id);
-      return { ...authUser, userDoc };
+      const data = await authService.getSession();
+      return data.user;
     } catch (error) {
-      if (error.code === 401) {
-        dispatch({ type: 'auth/sessionExpired' });
-      }
       return rejectWithValue(error.message);
     }
   }
 );
 
-// Async thunk for login
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
+export const loginWithPassword = createAsyncThunk(
+  "auth/loginWithPassword",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      await authService.login(email, password);
-      const authUser = await account.get();
-      const userDoc = await service.getUserByUserId(authUser.$id);
-      return { ...authUser, userDoc };
+      const data = await authService.login(email, password);
+      return data.user;
     } catch (error) {
       return rejectWithValue(error.message);
     }
   }
 );
 
-// Async thunk for logout
+export const loginWithGoogle = createAsyncThunk(
+  "auth/loginWithGoogle",
+  async ({ idToken }, { rejectWithValue }) => {
+    try {
+      const data = await authService.googleLogin(idToken);
+      return data.user;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const registerWithPassword = createAsyncThunk(
+  "auth/registerWithPassword",
+  async ({ name, email, password }, { rejectWithValue }) => {
+    try {
+      const data = await authService.register(name, email, password);
+      return data.user;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const fetchUserProfile = createAsyncThunk(
+  "auth/fetchUserProfile",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await userService.getMe();
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
-  async (_, { dispatch }) => {
-    await authService.logout();
-    // Clear all related states
-    dispatch({ type: 'cart/clearCart' });
-    dispatch({ type: 'wishlist/clearWishlist' });
-    dispatch({ type: 'checkout/clearAddress' });
-    return true;
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      await authService.logout();
+      dispatch({ type: "cart/clearCart" });
+      dispatch({ type: "wishlist/clearWishlist" });
+      dispatch({ type: "checkout/clearAddress" });
+      return true;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const logoutAllUser = createAsyncThunk(
+  "auth/logoutAllUser",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      await authService.logoutAll();
+      dispatch({ type: "cart/clearCart" });
+      dispatch({ type: "wishlist/clearWishlist" });
+      dispatch({ type: "checkout/clearAddress" });
+      return true;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
   }
 );
 
@@ -61,81 +112,85 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    login: (state, action) => {
-      const user = action.payload.user;
-
-      state.isAuthenticated = true;
-      state.user = user;
-      state.loading = false;
-
-      // ✅ ROLE & FLAGS SHOULD COME FROM BACKEND
-      state.isAdmin = user?.userDoc?.role === "admin" || user?.prefs?.role === "admin";
-      state.banned = user?.userDoc?.isBanned === true || user?.prefs?.banned === true;
-    },
-
-    logout: (state) => {
-      state.isAuthenticated = false;
-      state.user = null;
-      state.isAdmin = false;
-      state.banned = false;
-      state.loading = false;
-    },
-
     setLoading: (state, action) => {
       state.loading = action.payload;
-    },
-
-    sessionExpired: (state) => {
-      state.isAuthenticated = false;
-      state.user = null;
-      state.isAdmin = false;
-      state.banned = false;
-      state.loading = false;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(checkAuth.pending, (state) => {
+      .addCase(bootstrapSession.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
-      .addCase(checkAuth.fulfilled, (state, action) => {
-        const user = action.payload;
-        state.isAuthenticated = true;
-        state.user = user;
+      .addCase(bootstrapSession.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAdmin = user?.userDoc?.role === "admin" || user?.prefs?.role === "admin";
-        state.banned = user?.userDoc?.isBanned === true || user?.prefs?.banned === true;
+        state.bootstrapped = true;
+        applyUserState(state, action.payload);
       })
-      .addCase(checkAuth.rejected, (state) => {
-        state.isAuthenticated = false;
-        state.user = null;
-        state.isAdmin = false;
-        state.banned = false;
+      .addCase(bootstrapSession.rejected, (state, action) => {
         state.loading = false;
+        state.bootstrapped = true;
+        state.error = action.payload;
+        applyUserState(state, null);
       })
-      .addCase(loginUser.pending, (state) => {
+      .addCase(loginWithPassword.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        const user = action.payload;
-        state.isAuthenticated = true;
-        state.user = user;
+      .addCase(loginWithPassword.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAdmin = user?.userDoc?.role === "admin" || user?.prefs?.role === "admin";
-        state.banned = user?.userDoc?.isBanned === true || user?.prefs?.banned === true;
+        applyUserState(state, action.payload);
       })
-      .addCase(loginUser.rejected, (state) => {
+      .addCase(loginWithPassword.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+        applyUserState(state, null);
+      })
+      .addCase(loginWithGoogle.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginWithGoogle.fulfilled, (state, action) => {
+        state.loading = false;
+        applyUserState(state, action.payload);
+      })
+      .addCase(loginWithGoogle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        applyUserState(state, null);
+      })
+      .addCase(registerWithPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerWithPassword.fulfilled, (state, action) => {
+        state.loading = false;
+        applyUserState(state, action.payload);
+      })
+      .addCase(registerWithPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        if (state.user) {
+          state.user = action.payload;
+          state.isAdmin = action.payload?.role === "admin";
+          state.banned = action.payload?.isBanned === true;
+        }
+      })
+      .addCase(fetchUserProfile.rejected, (state, action) => {
+        state.error = action.payload;
       })
       .addCase(logoutUser.fulfilled, (state) => {
-        state.isAuthenticated = false;
-        state.user = null;
-        state.isAdmin = false;
-        state.banned = false;
         state.loading = false;
+        applyUserState(state, null);
+      })
+      .addCase(logoutAllUser.fulfilled, (state) => {
+        state.loading = false;
+        applyUserState(state, null);
       });
   },
 });
 
-export const { login, logout, setLoading, sessionExpired } = authSlice.actions;
+export const { setLoading } = authSlice.actions;
 export default authSlice.reducer;

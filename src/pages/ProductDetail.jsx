@@ -9,6 +9,7 @@ import useCart from "../hooks/useCart";
 import config from "../config";
 import { getSellingPrice, getDiscountPercent } from "../lib/utils";
 import Skeleton from "../components/Skeleton";
+import Seo from "../components/Seo";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -33,18 +34,20 @@ const ProductDetail = () => {
     if (selectedProduct?.sizes?.length && !selectedSize) {
       setSelectedSize(selectedProduct.sizes[0]);
     }
-  }, [selectedProduct, selectedSize]);
+  }, [selectedProduct]);
 
 const handleAddToCart = () => {
-  if (!selectedSize) return;
+  const requiresSize = Array.isArray(selectedProduct.sizes) && selectedProduct.sizes.length > 0;
+  if (requiresSize && !selectedSize) return;
 
-  addToCart(selectedProduct, 1, selectedSize);
+  addToCart(selectedProduct, 1, requiresSize ? selectedSize : null);
 };
 
 
   const handleBuyNow = () => {
-    if (!selectedSize) return;
-    if (addToCart(selectedProduct, 1, selectedSize)) {
+    const requiresSize = Array.isArray(selectedProduct.sizes) && selectedProduct.sizes.length > 0;
+    if (requiresSize && !selectedSize) return;
+    if (addToCart(selectedProduct, 1, requiresSize ? selectedSize : null)) {
       navigate('/checkout');
     }
   };
@@ -105,8 +108,46 @@ const handleAddToCart = () => {
 
   const outOfStock = selectedProduct.stock <= 0;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: selectedProduct.name,
+    image: images,
+    description: selectedProduct.description,
+    sku: selectedProduct.$id,
+    brand: {
+      "@type": "Brand",
+      name: "Veloura",
+    },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "INR",
+      price: discountedPrice,
+      availability: outOfStock
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      url: `${config.siteUrl}/product/${selectedProduct.slug}`,
+    },
+  };
+
+  if (selectedProduct.reviewCount > 0) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: selectedProduct.rating || 0,
+      reviewCount: selectedProduct.reviewCount,
+    };
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <Seo
+        title={selectedProduct.name}
+        description={selectedProduct.description?.slice(0, 160)}
+        image={images[0]}
+        url={`/product/${selectedProduct.slug}`}
+        type="product"
+        jsonLd={jsonLd}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* IMAGES */}
         <div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { databases, Query } from "../../lib/appwrite";
+import orderService from "../../lib/orderService";
+
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,12 +11,8 @@ const ManageOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
-        [Query.orderDesc("$createdAt"), Query.limit(100)] // Limit to 100 orders
-      );
-      setOrders(response.documents);
+      const response = await orderService.getAllOrders();
+      setOrders(response);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -25,13 +22,8 @@ const ManageOrders = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
-        orderId,
-        { status: newStatus }
-      );
-      fetchOrders(); // Refresh the list
+      await orderService.updateOrderStatus(orderId, newStatus);
+      fetchOrders();
     } catch (error) {
       console.error("Error updating order status:", error);
     }
@@ -67,7 +59,7 @@ const ManageOrders = () => {
                 <div className="text-right">
                   <p className="text-lg font-semibold">₹{order.total}</p>
                   <select
-                    value={order.status || "pending"} // Default to "pending" if status is undefined
+                    value={order.status || "pending"}
                     onChange={(e) => handleStatusChange(order.$id, e.target.value)}
                     className="mt-2 px-3 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
                   >
@@ -99,17 +91,14 @@ const ManageOrders = () => {
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-2">Products</h3>
                   <ul className="space-y-1 text-sm">
-                    {order.items.map((item, index) => {
-                      const parsedItem = JSON.parse(item);
-                      return (
-                        <li key={index} className="flex justify-between">
-                          <span>
-                            {parsedItem.name} ({parsedItem.size}) × {parsedItem.quantity} - ₹{parsedItem.price * parsedItem.quantity} each
-                          </span>
-                          <span>₹{parsedItem.price * parsedItem.quantity}</span>
-                        </li>
-                      );
-                    })}
+                    {order.items.map((item, index) => (
+                      <li key={index} className="flex justify-between">
+                        <span>
+                          {item.name} ({item.size}) × {item.quantity} - ₹{item.price * item.quantity} each
+                        </span>
+                        <span>₹{item.price * item.quantity}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}

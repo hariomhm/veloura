@@ -1,35 +1,25 @@
 const config = {
-  appwriteUrl:
-    import.meta.env.VITE_APPWRITE_ENDPOINT || "https://cloud.appwrite.io/v1",
+  // API
+  apiBaseUrl:
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_GATEWAY_URL ||
+    "http://localhost:5000",
 
-  appwriteProjectId: import.meta.env.VITE_APPWRITE_PROJECT_ID,
-  appwriteDatabaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID,
+  // Backwards-compatible name (legacy code uses apiGatewayUrl)
+  apiGatewayUrl:
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_GATEWAY_URL ||
+    "http://localhost:5000",
 
-  appwriteProductsCollectionId:
-    import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-
-  appwriteOrdersCollectionId:
-    import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
-
-  appwriteUsersCollectionId:
-    import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-
-
-  appwriteBucketId:
-    import.meta.env.VITE_APPWRITE_BUCKET_ID,
-
-  appwriteNewsletterCollectionId:
-    import.meta.env.VITE_APPWRITE_NEWSLETTER_COLLECTION_ID,
-  appwriteWishlistCollectionId:
-    import.meta.env.VITE_APPWRITE_WISHLIST_COLLECTION_ID,
-
-  appwriteCartsCollectionId:
-    import.meta.env.VITE_APPWRITE_CARTS_COLLECTION_ID,
-
+  // App constants
   currencySymbol: "₹",
+  siteUrl:
+    import.meta.env.VITE_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : ""),
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || "",
 
-  razorpayKeyId: import.meta.env.VITE_RAZORPAY_KEY_ID,
-  razorpayFunctionId: import.meta.env.VITE_RAZORPAY_FUNCTION_ID,
+  // Payment
+  razorpayKeyId: import.meta.env.VITE_RAZORPAY_KEY_ID || "",
 };
 
 export default config;

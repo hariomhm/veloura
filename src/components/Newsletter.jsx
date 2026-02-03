@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import service from '../lib/appwrite';
+import newsletterService from '../lib/newsletterService';
 
 const Newsletter = () => {
   const [email, setEmail] = useState('');
@@ -14,7 +14,7 @@ const Newsletter = () => {
     setMessage('');
 
     try {
-      await service.subscribeNewsletter(email);
+      await newsletterService.subscribe(email);
       setMessage('Thank you for subscribing! Please check your email to verify your subscription.');
       setEmail('');
     } catch (err) {

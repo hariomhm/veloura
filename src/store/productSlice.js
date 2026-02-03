@@ -1,7 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { databases, storage, ID } from "../lib/appwrite";
-import service from "../lib/appwrite";
-import { getSellingPrice } from "../lib/utils";
+import productService from "../lib/productService";
 
 const normalizeSizes = (sizes) => {
   if (Array.isArray(sizes)) return sizes;
@@ -12,16 +10,9 @@ const normalizeSizes = (sizes) => {
 };
 
 const normalizeProduct = (p) => {
-  const imageUrl = (p.imageUrl || []).map((id) =>
-    storage.getFilePreview(
-      import.meta.env.VITE_APPWRITE_BUCKET_ID,
-      id
-    )
-  );
   return {
     ...p,
-    imageUrl,
-    image: imageUrl[0] || "",
+    image: p.imageUrl?.[0] || "",
   };
 };
 
@@ -36,11 +27,8 @@ export const fetchProducts = createAsyncThunk(
       return state.products.products;
     }
     try {
-      const res = await databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID
-      );
-      return res.documents;
+      const res = await productService.getProducts();
+      return res;
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -53,11 +41,7 @@ export const fetchProductById = createAsyncThunk(
   "products/fetchProductById",
   async (productId, { rejectWithValue }) => {
     try {
-      return await databases.getDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-        productId
-      );
+      return await productService.getProduct(productId);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -70,7 +54,7 @@ export const fetchProductBySlug = createAsyncThunk(
   "products/fetchProductBySlug",
   async (slug, { rejectWithValue }) => {
     try {
-      return await service.getProductBySlug(slug);
+      return await productService.getProductBySlug(slug);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -81,7 +65,7 @@ export const fetchProductBySlug = createAsyncThunk(
 
 export const addProduct = createAsyncThunk(
   "products/addProduct",
-  async (productData, { rejectWithValue }) => {
+  async (productData, { rejectWithValue, getState }) => {
     try {
       const {
         name,
@@ -120,45 +104,43 @@ export const addProduct = createAsyncThunk(
 
       const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-      const imageIds = [];
+      // Upload images (local upload endpoint)
+      const imageUrls = [];
       for (const file of images || []) {
-        const uploaded = await storage.createFile(
-          import.meta.env.VITE_APPWRITE_BUCKET_ID,
-          ID.unique(),
-          file
-        );
-        imageIds.push(uploaded.$id);
+        if (file instanceof File) {
+          const { url } = await productService.uploadFileToS3(null, file);
+          imageUrls.push(url);
+        } else if (typeof file === "string") {
+          imageUrls.push(file);
+        }
       }
 
-      return await databases.createDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-        ID.unique(),
-        {
-          name,
-          mrp: Number(mrp),
-          discountPercent: discountPercent ? Number(discountPercent) : null,
-          category,
-          gender: gender.toLowerCase(),
-          sizes: normalizeSizes(sizes),
-          imageUrl: imageIds,
-          description,
-          stock: Number(stock),
-          slug,
-          color,
-          material,
-          pattern,
-          neckType,
-          sleeveLength,
-          washCare,
-          countryOfOrigin,
-          isFeatured: isFeatured || false,
-          isActive: true,
-          rating: 0,
-          reviewCount: 0,
-          productType,
-        }
-      );
+      const product = {
+        name,
+        mrp: Number(mrp),
+        discountPercent: discountPercent ? Number(discountPercent) : null,
+        category,
+        gender: gender.toLowerCase(),
+        sizes: normalizeSizes(sizes),
+        imageUrl: imageUrls,
+        description,
+        stock: Number(stock),
+        slug,
+        color,
+        material,
+        pattern,
+        neckType,
+        sleeveLength,
+        washCare,
+        countryOfOrigin,
+        isFeatured: isFeatured || false,
+        isActive: true,
+        rating: 0,
+        reviewCount: 0,
+        productType,
+      };
+
+      return await productService.createProduct(product);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -169,7 +151,7 @@ export const addProduct = createAsyncThunk(
 
 export const updateProduct = createAsyncThunk(
   "products/updateProduct",
-  async ({ productId, productData }, { rejectWithValue }) => {
+  async ({ productId, productData }, { rejectWithValue, getState }) => {
     try {
       const {
         name,
@@ -231,28 +213,19 @@ export const updateProduct = createAsyncThunk(
       }
 
       if (images && images.length > 0) {
-        const imageIds = [];
+        const imageUrls = [];
         for (const file of images) {
           if (file instanceof File) {
-            const uploaded = await storage.createFile(
-              import.meta.env.VITE_APPWRITE_BUCKET_ID,
-              ID.unique(),
-              file
-            );
-            imageIds.push(uploaded.$id);
-          } else {
-            imageIds.push(file);
+            const { url } = await productService.uploadFileToS3(null, file);
+            imageUrls.push(url);
+          } else if (typeof file === "string") {
+            imageUrls.push(file);
           }
         }
-        updateData.imageUrl = imageIds;
+        updateData.imageUrl = imageUrls;
       }
 
-      return await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-        productId,
-        updateData
-      );
+      return await productService.updateProduct(productId, updateData);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -263,13 +236,9 @@ export const updateProduct = createAsyncThunk(
 
 export const deleteProduct = createAsyncThunk(
   "products/deleteProduct",
-  async (productId, { rejectWithValue }) => {
+  async (productId, { rejectWithValue, getState }) => {
     try {
-      await databases.deleteDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID,
-        productId
-      );
+      await productService.deleteProduct(productId);
       return productId;
     } catch (err) {
       return rejectWithValue(err.message);

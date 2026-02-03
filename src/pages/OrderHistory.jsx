@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, memo } from 'react';
 import { useSelector } from 'react-redux';
-import service from '../lib/appwrite';
+import orderService from '../lib/orderService';
 import { Link } from 'react-router-dom';
 import { FaShoppingBag } from 'react-icons/fa';
 
@@ -10,24 +10,27 @@ const OrderHistory = memo(() => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const userId = user?.$id;
+
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await service.getUserOrders(user.userDoc.$id);
-      setOrders(res.documents);
+      if (!userId) return;
+      const res = await orderService.getOrders(userId);
+      setOrders(res);
     } catch (_) {
       setError('Failed to load orders');
     } finally {
       setLoading(false);
     }
-  }, [user.userDoc.$id]);
+  }, [userId, token]);
 
   useEffect(() => {
-    if (isAuthenticated && user?.userDoc) {
+    if (isAuthenticated && userId) {
       fetchOrders();
     } else {
       setLoading(false);
     }
-  }, [isAuthenticated, user, fetchOrders]);
+  }, [isAuthenticated, userId, fetchOrders]);
 
   if (!isAuthenticated) {
     return <div className="p-6">Please login to view your orders.</div>;

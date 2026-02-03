@@ -94,6 +94,8 @@ const EditProduct = () => {
     dispatch(updateProduct({ productId, productData }));
   };
 
+  const onFormSubmit = handleSubmit(onSubmit);
+
   /* ---------- STATES ---------- */
   if (loading && !selectedProduct) {
     return <div className="text-center py-12">Loading product…</div>;
@@ -118,7 +120,7 @@ const EditProduct = () => {
         <h1 className="text-3xl font-bold mb-8">Edit Product</h1>
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={onFormSubmit}
           className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
         >
         {/* NAME */}

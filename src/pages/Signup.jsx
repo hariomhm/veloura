@@ -1,255 +1,144 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { loginUser } from "../store/authSlice";
-import { setUser } from "../store/cartSlice";
-import authService from "../lib/auth";
-import { account, ID } from "../lib/appwrite";
-import service from "../lib/appwrite";
-import { sanitizeInput, isValidEmail, isValidPhone } from "../lib/utils";
+import { useDispatch, useSelector } from "react-redux";
+import { useForm } from "react-hook-form";
+import { GoogleLogin } from "@react-oauth/google";
+import { registerWithPassword, loginWithGoogle } from "../store/authSlice";
+import useToast from "../hooks/useToast";
+import config from "../config";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { error: showError, success: showSuccess } = useToast();
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm();
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordMatch, setPasswordMatch] = useState(null);
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const onSubmit = async (data) => {
+    try {
+      await dispatch(
+        registerWithPassword({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        })
+      ).unwrap();
 
-  const password = watch("password");
-  const confirmPassword = watch("confirmPassword");
-
-  /* ================= PASSWORD STRENGTH ================= */
-  const getPasswordStrength = (pwd) => {
-    if (!pwd) return 0;
-    let strength = 0;
-    if (pwd.length >= 8) strength++;
-    if (/[a-z]/.test(pwd)) strength++;
-    if (/[A-Z]/.test(pwd)) strength++;
-    if (/\d/.test(pwd)) strength++;
-    if (/[@$!%*?&]/.test(pwd)) strength++;
-    return strength;
+      navigate("/", { replace: true });
+    } catch (err) {
+      showError(err || "Signup failed");
+    }
   };
 
-  const passwordStrength = getPasswordStrength(password);
-
-  useEffect(() => {
-    if (confirmPassword) {
-      setPasswordMatch(confirmPassword === password);
-    } else {
-      setPasswordMatch(null);
-    }
-  }, [confirmPassword, password]);
-
-  /* ================= SUBMIT ================= */
-  const onSubmit = async (data) => {
-    if (data.password.trim() !== data.confirmPassword.trim()) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
+  const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      // Sanitize inputs
-      const sanitizedData = {
-        name: sanitizeInput(data.name),
-        email: data.email.trim().toLowerCase(),
-        phone: data.phone.trim(),
-        password: data.password.trim(),
-      };
-
-      // Additional validation
-      if (!isValidEmail(sanitizedData.email)) {
-        setError("Invalid email format");
-        return;
-      }
-
-      if (!isValidPhone(sanitizedData.phone)) {
-        setError("Invalid phone number");
-        return;
-      }
-
-      // 1️⃣ Create account
-      const accountData = await account.create(
-        ID.unique(),
-        sanitizedData.email,
-        sanitizedData.password,
-        sanitizedData.name
-      );
-
-      // 2️⃣ Create user document
-      await service.createUser({
-        userId: accountData.$id,
-        name: sanitizedData.name,
-        email: sanitizedData.email,
-        phone: sanitizedData.phone,
-        role: 'user',
-        createdAt: new Date().toISOString(),
-      });
-
-      // 3️⃣ Set default role (VERY IMPORTANT)
-      await account.updatePrefs({
-        role: "user", // 🔥 change to "admin" for admin accounts
-      });
-
-      // 4️⃣ Login user (creates session and sets state)
-      await dispatch(loginUser({
-        email: sanitizedData.email,
-        password: sanitizedData.password
-      })).unwrap();
-
-      // 5️⃣ Set cart user
-      const user = await authService.getCurrentUser();
-      dispatch(setUser(user.$id));
-
-      navigate("/");
+      const idToken = credentialResponse?.credential;
+      if (!idToken) throw new Error("Google signup failed");
+      await dispatch(loginWithGoogle({ idToken })).unwrap();
+      showSuccess("Signed up with Google");
+      navigate("/", { replace: true });
     } catch (err) {
-      setError(err?.message || "Signup failed");
-    } finally {
-      setLoading(false);
+      showError(err?.message || "Google signup failed");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-            Veloura
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+            VELOURA
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Create your account
+            Create your account to get started.
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {error && (
-            <div className="bg-red-100 text-red-700 px-4 py-2 rounded text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* NAME */}
-          <input
-            placeholder="Full Name"
-            {...register("name", { required: "Name is required" })}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-          {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
-
-          {/* EMAIL */}
-          <input
-            type="email"
-            placeholder="Email"
-            {...register("email", {
-              required: "Email is required",
-              pattern: {
-                value: /^\S+@\S+$/i,
-                message: "Invalid email address"
-              }
-            })}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-          {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
-
-          {/* PHONE */}
-          <input
-            type="tel"
-            placeholder="Phone Number"
-            {...register("phone", {
-              required: "Phone is required",
-              pattern: {
-                value: /^[6-9]\d{9}$/,
-                message: "Invalid phone number (10 digits starting with 6-9)"
-              }
-            })}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-          {errors.phone && <p className="text-red-500 text-xs">{errors.phone.message}</p>}
-
-          {/* PASSWORD */}
-          <div className="relative">
+          <div>
+            <label className="block mb-1 text-sm font-medium">Full Name</label>
             <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              type="text"
+              {...register("name", { required: "Name is required" })}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              placeholder="Your name"
+            />
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 text-sm font-medium">Email</label>
+            <input
+              type="email"
+              {...register("email", { required: "Email is required" })}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              placeholder="you@example.com"
+            />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 text-sm font-medium">Password</label>
+            <input
+              type="password"
               {...register("password", {
-                required: "Password required",
-                minLength: { value: 8, message: "Min 8 characters" },
+                required: "Password is required",
+                minLength: { value: 6, message: "Minimum 6 characters" },
               })}
-              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              placeholder="Create a password"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-sm text-gray-500"
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+            )}
           </div>
-
-          {/* STRENGTH */}
-          <div className="flex gap-1">
-            {[1,2,3,4,5].map(i => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded ${
-                  i <= passwordStrength ? "bg-green-500" : "bg-gray-300"
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* CONFIRM */}
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm Password"
-              {...register("confirmPassword", {
-                required: "Confirm password",
-              })}
-              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-2 text-sm text-gray-500"
-            >
-              {showConfirmPassword ? "Hide" : "Show"}
-            </button>
-          </div>
-
-          {passwordMatch !== null && (
-            <p className={`text-xs ${passwordMatch ? "text-green-500" : "text-red-500"}`}>
-              {passwordMatch ? "✓ Passwords match" : "✗ Passwords do not match"}
-            </p>
-          )}
 
           <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full py-3 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
           >
             {loading ? "Creating account..." : "Sign Up"}
           </button>
-
-          <p className="text-center text-sm">
-            Already have an account?{" "}
-            <Link to="/login" className="text-indigo-600">
-              Sign in
-            </Link>
-          </p>
         </form>
+
+        {config.googleClientId && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-gray-400 text-sm">
+              <span className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <span>or</span>
+              <span className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => showError("Google signup failed")} />
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-gray-600 dark:text-gray-300">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

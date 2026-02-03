@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { databases } from '../lib/appwrite';
+import userService from '../lib/userService';
 
 // Async thunk for fetching users
 export const fetchUsers = createAsyncThunk(
@@ -11,11 +11,7 @@ export const fetchUsers = createAsyncThunk(
       return state.users.users;
     }
     try {
-      const response = await databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
-      );
-      return response.documents;
+      return await userService.getUsers({});
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -25,15 +21,9 @@ export const fetchUsers = createAsyncThunk(
 // Async thunk for banning a user
 export const banUser = createAsyncThunk(
   'users/banUser',
-  async ({ userId, banReason }, { rejectWithValue }) => {
+  async ({ userId, banReason }, { rejectWithValue, getState }) => {
     try {
-      const updatedUser = await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-        userId,
-        { isBanned: true, banReason: banReason || '' }
-      );
-      return updatedUser;
+      return await userService.banUser(userId, banReason);
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -43,15 +33,9 @@ export const banUser = createAsyncThunk(
 // Async thunk for unbanning a user
 export const unbanUser = createAsyncThunk(
   'users/unbanUser',
-  async (userId, { rejectWithValue }) => {
+  async (userId, { rejectWithValue, getState }) => {
     try {
-      const updatedUser = await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-        userId,
-        { isBanned: false, banReason: '' }
-      );
-      return updatedUser;
+      return await userService.unbanUser(userId);
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -61,15 +45,9 @@ export const unbanUser = createAsyncThunk(
 // Async thunk for updating user role
 export const updateUserRole = createAsyncThunk(
   'users/updateUserRole',
-  async ({ userId, role }, { rejectWithValue }) => {
+  async ({ userId, role }, { rejectWithValue, getState }) => {
     try {
-      const updatedUser = await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-        userId,
-        { role }
-      );
-      return updatedUser;
+      return await userService.updateUserRole(userId, role);
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -79,15 +57,9 @@ export const updateUserRole = createAsyncThunk(
 // Async thunk for updating user status
 export const updateUserStatus = createAsyncThunk(
   'users/updateUserStatus',
-  async ({ userId, isActive }, { rejectWithValue }) => {
+  async ({ userId, isActive }, { rejectWithValue, getState }) => {
     try {
-      const updatedUser = await databases.updateDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-        userId,
-        { isActive }
-      );
-      return updatedUser;
+      return await userService.updateUserStatus(userId, isActive);
     } catch (error) {
       return rejectWithValue(error.message);
     }

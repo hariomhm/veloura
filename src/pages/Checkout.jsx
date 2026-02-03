@@ -1,117 +1,116 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/cartSlice';
 import { clearAddress } from '../store/checkoutSlice';
-import service from '../lib/appwrite';
+import orderService from '../lib/orderService';
+import userService from '../lib/userService';
 import useToast from '../hooks/useToast';
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { error: showError } = useToast();
-  const { items, totalPrice } = useSelector((state) => state.cart);
-  const { user } = useSelector((state) => state.auth);
-  const { name, phone, addressLine, city, state: addressState, pincode, isValid } = useSelector((state) => state.checkout);
+  const { items } = useSelector((state) => state.cart);
+  const { name, phone, addressLine, city, state: addressState, pincode, isValid, couponCode } = useSelector((state) => state.checkout);
   const [processing, setProcessing] = useState(false);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    // Check if cart is empty
-    if (items.length === 0) {
-      showError("Your cart is empty");
-      navigate('/cart');
-      return;
-    }
+    const initiatePayment = async () => {
+      if (startedRef.current) return;
+      startedRef.current = true;
 
-    // Check if address is valid
-    if (!isValid) {
-      navigate('/address');
-      return;
-    }
+      if (items.length === 0) {
+        showError("Your cart is empty");
+        navigate('/cart');
+        return;
+      }
 
-    // Check stock for each item
-    const outOfStockItems = items.filter(item => {
-      // Assuming we have stock in product data, but since cart doesn't have it, skip for now
-      // In real app, fetch product stock here
-      return false;
-    });
+      if (!isValid) {
+        navigate('/address');
+        return;
+      }
 
-    if (outOfStockItems.length > 0) {
-      showError("Some items in your cart are out of stock");
-      navigate('/cart');
-      return;
-    }
+      if (processing) return;
+      setProcessing(true);
 
-    if (processing) return; // Prevent multiple payments
+      try {
+        const checkoutPayload = items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          size: i.size || null,
+        }));
 
-    setProcessing(true);
+        const checkout = await orderService.createCheckoutSession(checkoutPayload, couponCode || undefined);
+        const paymentOrder = await orderService.createPaymentOrder(checkout.checkoutId);
 
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: totalPrice * 100, // amount in paisa
-      currency: 'INR',
-      name: 'Veloura',
-      description: 'Purchase',
-      handler: async (response) => {
-        try {
-          await service.createOrder({
-            userId: user.$id,
-            items: items.map((i) => ({
-              productId: i.productId,
-              name: i.name,
-              image: i.image,
-              size: i.size,
-              price: i.sellingPrice,
-              quantity: i.quantity,
-            })),
-            totalPrice,
-            paymentId: response.razorpay_payment_id,
-            orderId: response.razorpay_order_id,
-            status: "paid",
-            customerName: name,
-            customerPhone: phone,
-            addressLine,
-            city,
-            state: addressState,
-            pincode,
-            createdAt: new Date().toISOString(),
-          });
-
-          // Update user profile with latest address
-          try {
-            if (user.userDoc) {
-              await service.updateUser(user.userDoc.$id, {
-                name,
-                phone,
-                address: `${addressLine}, ${city}, ${addressState} - ${pincode}`,
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: paymentOrder.order.amount,
+          currency: paymentOrder.currency || 'INR',
+          name: 'Veloura',
+          description: 'Purchase',
+          order_id: paymentOrder.order.id,
+          handler: async (response) => {
+            try {
+              await orderService.confirmOrder({
+                checkoutId: paymentOrder.checkoutId,
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                signature: response.razorpay_signature,
+                provider: 'razorpay',
+                status: 'paid',
+                shipping: {
+                  name,
+                  phone,
+                  addressLine,
+                  city,
+                  state: addressState,
+                  pincode,
+                },
               });
-            }
-          } catch (error) {
-            console.error('Failed to update user profile:', error);
-          }
 
-          dispatch(clearCart());
-          dispatch(clearAddress());
-          navigate("/order-success");
-        } catch (error) {
-          console.error('Order creation failed:', error);
-          showError("Order creation failed. Please try again.");
-          setProcessing(false);
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          setProcessing(false);
-        }
+              try {
+                await userService.updateProfile({
+                  name,
+                  phone,
+                  address: `${addressLine}, ${city}, ${addressState} - ${pincode}`,
+                });
+              } catch (error) {
+                console.error('Failed to update user profile:', error);
+              }
+
+              dispatch(clearCart());
+              dispatch(clearAddress());
+              navigate("/order-success");
+            } catch (error) {
+              console.error('Order creation failed:', error);
+              showError("Order creation failed. Please try again.");
+              setProcessing(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setProcessing(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (error) {
+        console.error('Payment order creation failed:', error);
+        showError("Failed to initiate payment. Please try again.");
+        setProcessing(false);
       }
     };
 
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-  }, [dispatch, navigate, items, totalPrice, user, name, phone, addressLine, city, addressState, pincode, isValid, processing, showError]);
+    initiatePayment();
+  }, [dispatch, navigate, items, name, phone, addressLine, city, addressState, pincode, isValid, processing, showError, couponCode]);
 
   if (!isValid || items.length === 0) {
-    return null; // Will redirect
+    return null;
   }
 
   return (

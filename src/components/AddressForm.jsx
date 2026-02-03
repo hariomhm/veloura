@@ -15,11 +15,11 @@ const AddressForm = () => {
 
   useEffect(() => {
     // Auto-fill from user profile
-    if (user && user.userDoc) {
+    if (user) {
       dispatch(autoFill({
-        name: user.name || user.userDoc.name || '',
-        phone: user.prefs?.phone || user.userDoc.phone || '',
-        address: user.prefs?.address || user.userDoc.address || ''
+        name: user.name || '',
+        phone: user.phone || '',
+        address: user.address || ''
       }));
     }
   }, [user, dispatch]);

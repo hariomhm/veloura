@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { databases } from "../lib/appwrite";
+import orderService from "../lib/orderService";
 
 const OrderTracking = () => {
   const [orderId, setOrderId] = useState("");
@@ -14,12 +14,7 @@ const OrderTracking = () => {
     setOrder(null);
 
     try {
-      const response = await databases.getDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID,
-        orderId.trim()
-      );
-
+      const response = await orderService.getOrder(orderId.trim());
       setOrder(response);
     } catch {
       setError("Order not found. Please check your Order ID.");
@@ -98,20 +93,17 @@ const OrderTracking = () => {
                   Products
                 </h3>
                 <ul className="space-y-2">
-                  {order.items.map((item, index) => {
-                    const parsedItem = JSON.parse(item);
-                    return (
-                      <li
-                        key={index}
-                        className="flex justify-between text-sm"
-                      >
-                        <span>
-                          {parsedItem.name} ({parsedItem.size}) × {parsedItem.quantity}
-                        </span>
-                        <span>₹{parsedItem.price}</span>
-                      </li>
-                    );
-                  })}
+                  {order.items.map((item, index) => (
+                    <li
+                      key={index}
+                      className="flex justify-between text-sm"
+                    >
+                      <span>
+                        {item.name} ({item.size}) × {item.quantity}
+                      </span>
+                      <span>₹{item.price}</span>
+                    </li>
+                  ))}
                 </ul>
               </>
             )}

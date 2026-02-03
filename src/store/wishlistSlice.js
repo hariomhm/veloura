@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import service from '../lib/appwrite';
+import wishlistService from '../lib/wishlistService';
 
 // Async thunk for fetching wishlist
 export const fetchWishlist = createAsyncThunk(
@@ -7,11 +7,11 @@ export const fetchWishlist = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     const state = getState();
     const user = state.auth.user;
-    if (!user?.userDoc) throw new Error('User not authenticated');
+    if (!user?.$id) throw new Error('User not authenticated');
 
     try {
-      const res = await service.getWishlist(user.userDoc.$id);
-      return res.map(item => item.productId);
+      const res = await wishlistService.getWishlist();
+      return res;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -24,10 +24,10 @@ export const toggleWishlist = createAsyncThunk(
   async (productId, { rejectWithValue, getState }) => {
     const state = getState();
     const user = state.auth.user;
-    if (!user?.userDoc) throw new Error('User not authenticated');
+    if (!user?.$id) throw new Error('User not authenticated');
 
     try {
-      const updatedWishlist = await service.toggleWishlist(user.userDoc.$id, productId);
+      const updatedWishlist = await wishlistService.toggleWishlist(productId);
       return updatedWishlist;
     } catch (error) {
       return rejectWithValue(error.message);

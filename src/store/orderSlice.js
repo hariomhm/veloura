@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { databases } from "../lib/appwrite";
-import config from "../config";
+import orderService from "../lib/orderService";
 
 /* ---------- FETCH ALL ORDERS ---------- */
 
@@ -13,11 +12,7 @@ export const fetchAllOrders = createAsyncThunk(
       return state.orders.orders;
     }
     try {
-      const res = await databases.listDocuments(
-        config.appwriteDatabaseId,
-        config.appwriteOrdersCollectionId
-      );
-      return res.documents;
+      return await orderService.getAllOrders();
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -28,14 +23,9 @@ export const fetchAllOrders = createAsyncThunk(
 
 export const updateOrderStatus = createAsyncThunk(
   "orders/updateOrderStatus",
-  async ({ orderId, status }, { rejectWithValue }) => {
+  async ({ orderId, status }, { rejectWithValue, getState }) => {
     try {
-      return await databases.updateDocument(
-        config.appwriteDatabaseId,
-        config.appwriteOrdersCollectionId,
-        orderId,
-        { status }
-      );
+      return await orderService.updateOrderStatus(orderId, status);
     } catch (err) {
       return rejectWithValue(err.message);
     }

@@ -1,57 +1,50 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../store/authSlice";
-import { setUser } from "../store/cartSlice";
-import authService from "../lib/auth";
+import { useForm } from "react-hook-form";
+import { GoogleLogin } from "@react-oauth/google";
+import { loginWithPassword, loginWithGoogle } from "../store/authSlice";
 import useToast from "../hooks/useToast";
+import config from "../config";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { error: showError, success: showSuccess } = useToast();
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
 
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { error } = useToast();
-  const { isAuthenticated, loading: authLoading } = useSelector((state) => state.auth);
-
-  // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (isAuthenticated) {
       navigate("/", { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data) => {
-    setLoading(true);
-
     try {
-      const result = await dispatch(loginUser({
-        email: data.email.trim().toLowerCase(),
-        password: data.password.trim()
-      })).unwrap();
-
-      dispatch(setUser(result.$id));
-      navigate("/");
+      await dispatch(
+        loginWithPassword({ email: data.email, password: data.password })
+      ).unwrap();
+      navigate("/", { replace: true });
     } catch (err) {
-      let message = "Login failed. Please try again.";
+      showError(err || "Login failed");
+    }
+  };
 
-      if (err?.code === 401) {
-        message = "Invalid email or password.";
-      } else if (err?.message) {
-        message = err.message;
-      }
-
-      error(message);
-    } finally {
-      setLoading(false);
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const idToken = credentialResponse?.credential;
+      if (!idToken) throw new Error("Google login failed");
+      await dispatch(loginWithGoogle({ idToken })).unwrap();
+      showSuccess("Signed in with Google");
+      navigate("/", { replace: true });
+    } catch (err) {
+      showError(err?.message || "Google login failed");
     }
   };
 
@@ -67,83 +60,64 @@ const Login = () => {
           </p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-
-          {/* Email */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email address
-            </label>
+            <label className="block mb-1 text-sm font-medium">Email</label>
             <input
               type="email"
-              autoComplete="email"
-              placeholder="Enter your email"
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              {...register("email", {
-                required: "Email is required",
-                pattern: {
-                  value: /^\S+@\S+$/i,
-                  message: "Invalid email address"
-                }
-              })}
+              {...register("email", { required: "Email is required" })}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              placeholder="you@example.com"
             />
             {errors.email && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.email.message}
-              </p>
+              <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
             )}
           </div>
 
-          {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                className="w-full px-3 py-2 pr-10 border rounded-md focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                {...register("password", {
-                  required: "Password is required",
-                })}
-              />
-              <button
-                type="button"
-                aria-label="Toggle password visibility"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
+            <label className="block mb-1 text-sm font-medium">Password</label>
+            <input
+              type="password"
+              {...register("password", { required: "Password is required" })}
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              placeholder="••••••••"
+            />
             {errors.password && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.password.message}
-              </p>
+              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
-
-          <p className="text-center text-sm text-gray-600 dark:text-gray-300">
-            Don&apos;t have an account?{" "}
-            <Link
-              to="/signup"
-              className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-            >
-              Sign up
-            </Link>
-          </p>
         </form>
+
+        {config.googleClientId && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-gray-400 text-sm">
+              <span className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <span>or</span>
+              <span className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => showError("Google login failed")} />
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-gray-600 dark:text-gray-300">
+          Don&apos;t have an account?{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+          >
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );

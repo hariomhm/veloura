@@ -10,11 +10,12 @@ import FilterDrawer from "../components/FilterDrawer";
 import Loading from "../components/Loading";
 import Error from "../components/Error";
 import { FaSearch } from "react-icons/fa";
+import Seo from "../components/Seo";
 
 import useFilteredProducts from "../hooks/useFilteredProducts";
 import useDebounce from "../hooks/useDebounce";
 
-const CategoryPage = ({ gender, title }) => {
+const CategoryPage = ({ gender, title, seoPath = "/products" }) => {
   const dispatch = useDispatch();
   const { products, loading, error } = useSelector((s) => s.products);
   const [searchParams] = useSearchParams();
@@ -43,6 +44,14 @@ const CategoryPage = ({ gender, title }) => {
   useEffect(() => {
     if (!products.length) dispatch(fetchProducts());
   }, [dispatch, products.length]);
+
+  /* SYNC SEARCH PARAM */
+  useEffect(() => {
+    const fromUrl = searchParams.get("search") || "";
+    if (fromUrl !== searchTerm) {
+      setSearchTerm(fromUrl);
+    }
+  }, [searchParams, searchTerm]);
 
   /* FILTER OPTIONS */
   const categories = useMemo(
@@ -90,6 +99,11 @@ const CategoryPage = ({ gender, title }) => {
 
   return (
     <div className="max-w-350 mx-auto px-4 py-6">
+      <Seo
+        title={title}
+        description={`Browse ${title} on Veloura. Filter by size, color, price, and more.`}
+        url={seoPath}
+      />
       {/* BREADCRUMB */}
       <div className="text-sm text-gray-500 mb-4">
         Home / Collections /{" "}

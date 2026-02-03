@@ -1,10 +1,16 @@
-import { useCallback, memo, useMemo } from "react";
+import { useCallback, memo, useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaShoppingCart } from "react-icons/fa";
+import { useDispatch, useSelector } from "react-redux";
 import config from "../config";
 import useCart from "../hooks/useCart";
+import couponService from "../lib/couponService";
+import { setCoupon, setCouponError } from "../store/checkoutSlice";
+import useToast from "../hooks/useToast";
 
 const Cart = memo(() => {
+  const dispatch = useDispatch();
+  const { success, error: showError } = useToast();
   const {
     items,
     totalPrice,
@@ -12,6 +18,25 @@ const Cart = memo(() => {
     updateQuantity,
     clearCart,
   } = useCart();
+  const { couponCode, couponError } = useSelector((state) => state.checkout);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
+  const [couponInput, setCouponInput] = useState(couponCode || "");
+  const [discountTotal, setDiscountTotal] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  useEffect(() => {
+    if (!couponCode) {
+      setDiscountTotal(0);
+      return;
+    }
+    setDiscountTotal(0);
+    dispatch(setCouponError(""));
+  }, [items, dispatch, couponCode]);
+
+  useEffect(() => {
+    setCouponInput(couponCode || "");
+  }, [couponCode]);
 
   const handleRemove = useCallback((productId, size) => {
     removeFromCart(productId, size);
@@ -26,6 +51,45 @@ const Cart = memo(() => {
     const lineTotal = item.sellingPrice * item.quantity;
     return { ...item, lineTotal };
   }), [items]);
+
+  const applyCoupon = async () => {
+    if (!isAuthenticated) {
+      showError("Please log in to apply a coupon");
+      return;
+    }
+    if (!couponInput.trim()) {
+      dispatch(setCoupon(""));
+      dispatch(setCouponError(""));
+      setDiscountTotal(0);
+      return;
+    }
+
+    setCouponLoading(true);
+    try {
+      const summary = await couponService.validateCoupon(
+        items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          size: i.size || null,
+        })),
+        couponInput.trim()
+      );
+
+      setDiscountTotal(summary.discountTotal || 0);
+      dispatch(setCoupon(summary.coupon?.code || couponInput.trim()));
+      dispatch(setCouponError(""));
+      success("Coupon applied");
+    } catch (err) {
+      setDiscountTotal(0);
+      dispatch(setCoupon(""));
+      dispatch(setCouponError(err.message));
+      showError(err.message);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const totalAfterDiscount = Math.max(0, totalPrice - discountTotal);
 
   if (items.length === 0) {
     return (
@@ -132,9 +196,40 @@ const Cart = memo(() => {
             </span>
           </div>
 
+          {discountTotal > 0 && (
+            <div className="flex justify-between mb-2 text-green-600">
+              <span>Discount</span>
+              <span>-{config.currencySymbol}{discountTotal.toFixed(2)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between mb-2">
             <span>Shipping</span>
             <span className="text-green-600">Free</span>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-2">Coupon Code</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                placeholder="Enter coupon"
+              />
+              <button
+                type="button"
+                onClick={applyCoupon}
+                disabled={couponLoading}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                {couponLoading ? "Applying..." : "Apply"}
+              </button>
+            </div>
+            {couponError && (
+              <p className="text-xs text-red-500 mt-1">{couponError}</p>
+            )}
           </div>
 
           <hr className="my-4" />
@@ -143,7 +238,7 @@ const Cart = memo(() => {
             <span>Total</span>
             <span>
               {config.currencySymbol}
-              {totalPrice.toFixed(2)}
+              {totalAfterDiscount.toFixed(2)}
             </span>
           </div>
 

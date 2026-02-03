@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { logoutUser } from '../store/authSlice';
+import { logoutUser, logoutAllUser } from '../store/authSlice';
 import { FaChevronRight } from 'react-icons/fa';
 
 const UserProfile = () => {
@@ -21,6 +21,15 @@ const UserProfile = () => {
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleLogoutAll = async () => {
+    try {
+      await dispatch(logoutAllUser()).unwrap();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout all failed:', error);
     }
   };
 
@@ -66,12 +75,18 @@ const UserProfile = () => {
       </ul>
 
       {/* Logout */}
-      <div className="mt-10">
+      <div className="mt-10 space-y-3">
         <button
           onClick={handleLogout}
           className="text-red-500 hover:underline font-medium"
         >
           Logout
+        </button>
+        <button
+          onClick={handleLogoutAll}
+          className="text-red-500 hover:underline font-medium"
+        >
+          Logout All Devices
         </button>
       </div>
     </div>

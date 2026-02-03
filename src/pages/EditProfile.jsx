@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { login } from "../store/authSlice";
-import authService from "../lib/auth";
-import service from "../lib/appwrite";
+import { fetchUserProfile } from "../store/authSlice";
+import userService from "../lib/userService";
 import useToast from "../hooks/useToast";
 
 const EditProfile = () => {
@@ -28,12 +27,11 @@ const EditProfile = () => {
       return;
     }
 
-    // Pre-fill form with current user data
     if (user) {
       setValue("name", user.name || "");
       setValue("email", user.email || "");
-      setValue("phone", user.prefs?.phone || "");
-      setValue("address", user.prefs?.address || "");
+      setValue("phone", user.phone || "");
+      setValue("address", user.address || "");
     }
   }, [user, isAuthenticated, setValue, navigate]);
 
@@ -41,24 +39,12 @@ const EditProfile = () => {
     setLoading(true);
 
     try {
-      // Update users collection
-      if (user.userDoc) {
-        await service.updateUser(user.userDoc.$id, {
-          phone: data.phone,
-          address: data.address,
-        });
-      }
-
-      // Update profile preferences
-      await authService.updateProfile({
+      await userService.updateProfile({
         phone: data.phone,
         address: data.address,
       });
 
-      // Refresh user data
-      const updatedUser = await authService.getCurrentUser();
-      dispatch(login({ user: updatedUser }));
-
+      dispatch(fetchUserProfile());
       success("Profile updated successfully!");
     } catch (err) {
       error(err?.message || "Failed to update profile");
@@ -79,7 +65,6 @@ const EditProfile = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-6"
       >
-
         {/* Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

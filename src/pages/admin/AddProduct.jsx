@@ -58,6 +58,8 @@ const AddProduct = () => {
     );
   };
 
+  const onFormSubmit = handleSubmit(onSubmit);
+
   /* ---------- UI ---------- */
   return (
     <AdminGuard>
@@ -65,7 +67,7 @@ const AddProduct = () => {
         <h1 className="text-3xl font-bold mb-8">Add New Product</h1>
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={onFormSubmit}
           className="max-w-2xl space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"
         >
         {/* PRODUCT NAME */}

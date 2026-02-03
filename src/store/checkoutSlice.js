@@ -12,6 +12,8 @@ const loadFromStorage = () => {
       city: parsed.city || '',
       state: parsed.state || '',
       pincode: parsed.pincode || '',
+      couponCode: parsed.couponCode || '',
+      couponError: parsed.couponError || '',
       errors: parsed.errors || {},
       isValid: parsed.isValid || false,
     };
@@ -23,6 +25,8 @@ const loadFromStorage = () => {
       city: '',
       state: '',
       pincode: '',
+      couponCode: '',
+      couponError: '',
       errors: {},
       isValid: false,
     };
@@ -51,6 +55,15 @@ const checkoutSlice = createSlice({
       state.isValid = validateForm(state);
       saveToStorage(state);
     },
+    setCoupon: (state, action) => {
+      state.couponCode = action.payload || '';
+      state.couponError = '';
+      saveToStorage(state);
+    },
+    setCouponError: (state, action) => {
+      state.couponError = action.payload || '';
+      saveToStorage(state);
+    },
     setErrors: (state, action) => {
       state.errors = action.payload;
       state.isValid = validateForm(state);
@@ -72,6 +85,8 @@ const checkoutSlice = createSlice({
         city: '',
         state: '',
         pincode: '',
+        couponCode: '',
+        couponError: '',
         errors: {},
         isValid: false,
       });
@@ -96,5 +111,5 @@ const validateForm = (state) => {
   return Object.keys(errors).length === 0;
 };
 
-export const { updateField, setErrors, autoFill, clearAddress } = checkoutSlice.actions;
+export const { updateField, setCoupon, setCouponError, setErrors, autoFill, clearAddress } = checkoutSlice.actions;
 export default checkoutSlice.reducer;

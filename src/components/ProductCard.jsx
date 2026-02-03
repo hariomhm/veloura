@@ -21,7 +21,7 @@ const ProductCard = memo(({ product }) => {
   }), [product]);
 
   const isInCart = useMemo(() =>
-    cartItems.some(item => item.product.$id === product.$id),
+    cartItems.some(item => item.productId === product.$id && (item.size ?? null) === null),
     [cartItems, product.$id]
   );
 

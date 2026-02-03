@@ -4,6 +4,7 @@ import banner from "../assets/bannerImage.png";
 import mens from "../assets/mensbannerimage.png";
 import womens from "../assets/womensbannerimage.png";
 import kids from "../assets/kidsbannerimage.png";
+import Seo from "../components/Seo";
 
 const Home = () => {
   const banners = [
@@ -15,6 +16,11 @@ const Home = () => {
 
   return (
 <div className="min-h-screen">
+  <Seo
+    title="Home"
+    description="Discover premium fashion for men, women, and kids at Veloura. Shop curated collections with fast delivery."
+    url="/"
+  />
   <div className="grid grid-cols-1">
 {banners.map((banner, index) => (
   <Link

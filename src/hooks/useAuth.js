@@ -7,8 +7,8 @@ const useAuth = () => {
     user,
     isAuthenticated,
     loading,
-    isAdmin: user?.userDoc?.role === 'admin' || user?.prefs?.role === 'admin',
-    isUser: user?.userDoc?.role === 'user' || user?.prefs?.role === 'user',
+    isAdmin: user?.role === 'admin',
+    isUser: user?.role === 'user',
   };
 };
 

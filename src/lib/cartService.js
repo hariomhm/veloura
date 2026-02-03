@@ -1,26 +1,18 @@
-import { databases, ID } from "../lib/appwrite";
-import { Query } from "appwrite";
-import config from "../config";
+import { apiRequest } from "./apiClient";
 
-const DB = config.appwriteDatabaseId;
-const CARTS = config.appwriteCartsCollectionId;
-
-export const updateCart = async (userId, data) => {
-  const res = await databases.listDocuments(DB, CARTS, [
-    Query.equal("userId", userId),
-  ]);
-
-  if (res.documents.length) {
-    return databases.updateDocument(
-      DB,
-      CARTS,
-      res.documents[0].$id,
-      data
-    );
+class CartService {
+  async getCart() {
+    const data = await apiRequest("/cart", { method: "GET" });
+    return data.items || [];
   }
 
-  return databases.createDocument(DB, CARTS, ID.unique(), {
-    userId,
-    ...data,
-  });
-};
+  async saveCart(items) {
+    return apiRequest("/cart", {
+      method: "PUT",
+      body: { items },
+    });
+  }
+}
+
+const cartService = new CartService();
+export default cartService;

@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { getSellingPrice } from "../lib/utils";
-import { updateCart } from "../lib/cartService";
-import config from "../config";
-import { databases, Query } from "../lib/appwrite";
+import cartService from "../lib/cartService";
 
 /* -------- HELPERS -------- */
 
@@ -20,31 +18,26 @@ const saveCartToStorage = (userId, items) => {
 
 /* -------- ASYNC THUNKS -------- */
 
-// Sync cart with Appwrite
+// Sync cart with API
 export const syncCart = createAsyncThunk(
   "cart/syncCart",
-  async (userId, { rejectWithValue }) => {
+  async (userId, { rejectWithValue, getState }) => {
     try {
       if (!userId) return [];
-      const res = await databases.listDocuments(
-        config.appwriteDatabaseId,
-        config.appwriteCartsCollectionId,
-        [Query.equal("userId", userId)]
-      );
-      return res.documents[0]?.items || [];
+      return await cartService.getCart();
     } catch (error) {
       return rejectWithValue(error.message);
     }
   }
 );
 
-// Save cart to Appwrite
+// Save cart to API
 export const saveCartToServer = createAsyncThunk(
   "cart/saveCartToServer",
-  async ({ userId, items }, { rejectWithValue }) => {
+  async ({ userId, items }, { rejectWithValue, getState }) => {
     try {
       if (!userId) return;
-      await updateCart(userId, { items });
+      await cartService.saveCart(items);
       return items;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -115,11 +108,12 @@ const cartSlice = createSlice({
     /* ADD TO CART */
     addToCart: (state, action) => {
       const { product, quantity = 1, size } = action.payload;
+      const itemSize = size || null; // Handle no size case
 
       const existingItem = state.items.find(
         (item) =>
           item.productId === product.$id &&
-          item.size === size
+          item.size === itemSize
       );
 
       if (existingItem) {
@@ -134,7 +128,7 @@ const cartSlice = createSlice({
           discountPercent: product.discountPercent || 0,
           sellingPrice,
           quantity,
-          size,
+          size: itemSize,
         });
       }
 
@@ -149,12 +143,13 @@ const cartSlice = createSlice({
     /* REMOVE FROM CART */
     removeFromCart: (state, action) => {
       const { productId, size } = action.payload;
+      const itemSize = size || null;
 
       state.items = state.items.filter(
         (item) =>
           !(
             item.productId === productId &&
-            item.size === size
+            item.size === itemSize
           )
       );
 
@@ -169,11 +164,12 @@ const cartSlice = createSlice({
     /* UPDATE QUANTITY */
     updateQuantity: (state, action) => {
       const { productId, size, quantity } = action.payload;
+      const itemSize = size || null;
 
       const item = state.items.find(
         (item) =>
           item.productId === productId &&
-          item.size === size
+          item.size === itemSize
       );
 
       if (item) {
@@ -182,7 +178,7 @@ const cartSlice = createSlice({
             (i) =>
               !(
                 i.productId === productId &&
-                i.size === size
+                i.size === itemSize
               )
           );
         } else {
